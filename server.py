@@ -686,6 +686,19 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
             parsed = urllib.parse.urlparse(self.path)
             qs = urllib.parse.parse_qs(parsed.query)
 
+            # --- /api/quit ---
+            if parsed.path == "/api/quit":
+                self._json({"ok": True, "msg": "shutting down"})
+                # Shutdown in a separate thread so the response can be sent first
+                import time as _time
+                def _shutdown():
+                    _time.sleep(0.3)
+                    import os as _os
+                    _os._exit(0)
+                _threading = threading
+                _threading.Thread(target=_shutdown, daemon=True).start()
+                return
+
             # --- /api/set-folder ---
             if parsed.path == "/api/set-folder":
                 try:
