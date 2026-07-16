@@ -695,16 +695,18 @@ function applyThemeVars(t,dark){
 }
 function applyTheme(){var t=loadTheme();var dark=document.body.classList.contains('dark');applyThemeVars(t,dark);applyBgOverlay()}
 function applyBgOverlay(){
+  try{
   var op=document.getElementById('tOpacity');var bl=document.getElementById('tBlur');var bgUrl=document.getElementById('tBgUrl');var overlay=document.getElementById('bgOverlay');
   var v=document.getElementById('tOpacityVal');var b=document.getElementById('tBlurVal');
-  if(op)v.textContent=op.value+'%';if(bl)b.textContent=bl.value+'px';
-  var o=(parseInt(op&&op.value||100)/100).toFixed(2);var blur=parseInt(bl&&bl.value||0);
+  if(op&&v)v.textContent=op.value+'%';if(bl&&b)b.textContent=bl.value+'px';
+  var o=(parseInt((op&&op.value)||100)/100).toFixed(2);var blur=parseInt((bl&&bl.value)||0);
   if(o<1||blur>0){overlay.style.display='block';overlay.style.background='rgba(255,255,255,'+(1-o)+')';overlay.style.backdropFilter='blur('+blur+'px)'}else{overlay.style.display='none'}
-  if(bgUrl&&bgUrl.value.trim()){var url=bgUrl.value.trim();if(/\.(mp4|webm|ogg)$/i.test(url))setBgVideo(url);else setBgImage(url)}else clearBg()
+  if(bgUrl&&bgUrl.value&&bgUrl.value.trim()){var url=bgUrl.value.trim();if(/\.(mp4|webm|ogg)$/i.test(url))setBgVideo(url);else setBgImage(url)}else clearBg()}
+  catch(e){}
 }
 function setBgImage(url){clearBgVideo();document.body.style.backgroundImage='url('+url+')';document.body.style.backgroundSize='cover';document.body.style.backgroundPosition='center';document.body.style.backgroundAttachment='fixed'}
 function setBgVideo(url){var v=document.getElementById('bgVideo');v.src=url;v.loop=true;v.muted=true;v.autoplay=true;v.playsInline=true;v.style.display='block';try{v.play()}catch(e){};document.body.style.backgroundImage='none'}
-function clearBgVideo(){var v=document.getElementById('bgVideo');v.pause();v.src='';v.style.display='none'}
+function clearBgVideo(){var v=document.getElementById('bgVideo');if(v&&v.pause){v.pause();v.src=''};v.style.display='none'}
 function clearBg(){clearBgVideo();document.body.style.backgroundImage=''}
 function loadBgFile(){var f=document.getElementById('tBgFile').files[0];if(!f)return;var url=URL.createObjectURL(f);document.getElementById('tBgUrl').value=url;applyTheme()}
 function toggleTheme(){var p=document.getElementById('themePanel');p.style.display=p.style.display==='none'?'block':'none';if(p.style.display==='block')renderThemePresets()}
