@@ -29,7 +29,13 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install pyinstaller cryptography
+        run: pip install pyinstaller cryptography ruff pytest
+
+      - name: Lint with ruff
+        run: ruff check .
+
+      - name: Run tests
+        run: pytest -v
 
       - name: Build standalone
         run: python build_exe.py

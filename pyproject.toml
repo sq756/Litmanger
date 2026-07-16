@@ -26,6 +26,38 @@ litmanger = "litmanger.cli:main"
 
 [project.optional-dependencies]
 full = ["requests>=2.28", "browser-cookie3>=0.19", "beautifulsoup4>=4.12", "bibtexparser>=1.4"]
+dev = ["pytest>=7", "ruff>=0.5", "mypy>=1", "pre-commit>=3"]
 
 [tool.setuptools.packages.find]
 include = ["litmanger*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # Pyflakes
+    "I",     # isort
+    "N",     # pep8-naming
+    "UP",    # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "N818",  # exception class naming
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.9"
+ignore_missing_imports = true
+check_untyped_defs = false
+warn_return_any = false
+warn_unused_ignores = false

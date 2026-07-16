@@ -5,7 +5,7 @@
 .dark{--bg:#1a1a2e;--p:#252540;--t:#e0e0e8;--t2:#999;--a:#818cf8;--a2:#a78bfa;--b:#3a3a55;--h:#2a2a45}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--t);height:100vh;overflow:hidden;user-select:none}
-#app{display:flex;height:100vh}
+#app{display:flex;height:100vh;opacity:1;transition:opacity .5s ease}
 #left{width:320px;min-width:200px;background:var(--p);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
 #center{flex:1;min-width:280px;background:var(--p);display:flex;flex-direction:column;overflow:hidden}
 #right{width:380px;min-width:200px;background:var(--p);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
@@ -100,10 +100,11 @@ input:focus,textarea:focus{border-color:var(--a)}
 #bgOverlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;pointer-events:none}
 </style></head>
 <body>
+<div id="splash" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:10000;cursor:pointer;transition:opacity 0.5s ease,visibility 0.5s ease;flex-direction:column;gap:0.75rem"><div id="splashIcon" style="width:80px;height:80px;border-radius:20px;background:linear-gradient(135deg,var(--a),var(--a2));display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:800;color:#fff;font-family:inherit;box-shadow:0 8px 32px rgba(79,70,229,0.3);transition:transform 0.2s ease,box-shadow 0.2s ease;user-select:none">LM</div><div style="font-size:0.82rem;color:var(--t2);font-weight:500;user-select:none">Click to open library</div><div id="splashError" style="display:none;font-size:0.75rem;color:#ef4444;margin-top:0.5rem;text-align:center;max-width:300px"></div></div>
 <div id="bgVideo"></div><div id="bgOverlay"></div>
 <div id="app">
 <div id="left">
-<div class="ph"><span>LitManager</span><span style="flex:1"></span>
+<div class="ph"><span id="logoIcon" style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--a),var(--a2));display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;cursor:pointer;transition:transform .15s ease;flex-shrink:0;user-select:none" title="Refresh" onclick="refreshApp()">LM</span><span style="flex:1"></span>
 <div class="menu-wrap" style="position:relative"><button class="btn btn-o btn-s" onclick="toggleMenu(event)">Menu</button>
 <div class="menu-drop" id="menuDrop" style="display:none;position:absolute;top:100%;right:0;background:var(--p);border:1px solid var(--b);border-radius:var(--r);z-index:100;min-width:180px;box-shadow:0 4px 12px rgba(0,0,0,.1)">
 <div class="menu-item" onclick="exportAllBibtex();toggleMenu()">Export BibTeX</div>
@@ -111,6 +112,7 @@ input:focus,textarea:focus{border-color:var(--a)}
 <div class="menu-item" onclick="downloadAllPdfs();toggleMenu()">Download All PDFs</div>
 <div class="menu-item" onclick="generateHtml();toggleMenu()">Static HTML</div>
 <div class="menu-item" onclick="scanDownloads();toggleMenu()">Auto-Scan PDFs</div>
+	<div class="menu-item" onclick="selectPdfFolder();toggleMenu()">Select PDFs Folder</div>
 <div style="border-top:1px solid var(--b)"></div>
 <div class="menu-item" onclick="if(confirm('Refresh?')){loadPapers();updateStats()};toggleMenu()">Refresh</div>
 </div></div>
@@ -190,12 +192,68 @@ function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace
 function toast(msg){
   var t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('on');
+
+// ── Splash screen ──
+var _folderConfigured=false;
+function showSplashError(msg){var e=document.getElementById('splashError');e.style.display='block';e.textContent=msg}
+async function enterApp(){
+  try{var r=await fetch('/api/get-folder');var d=await r.json();_folderConfigured=!d.is_default;if(_folderConfigured)localStorage.setItem('litmanger_folder',d.path)}catch(e){showSplashError('Server not reachable. Is Litmanger running?');return}
+  try{await loadPapers();await loadConfig();updateStats();renderChat()}catch(e){showSplashError('Failed to load: '+e.message);return}
+  var splash=document.getElementById('splash');var app=document.getElementById('app');
+  app.style.display='flex';app.style.opacity='0';app.style.transition='opacity 0.5s ease';
+  splash.style.opacity='0';splash.style.visibility='hidden';splash.style.transition='opacity 0.4s ease,visibility 0.4s ease';
+  setTimeout(function(){app.style.opacity='1'},100);
+  localStorage.setItem('litmanger_entered','1');
+}
+
+// ── Logo refresh ──
+async function refreshApp(){
+  var icon=document.getElementById('logoIcon');
+  icon.style.transform='rotate(180deg)';icon.style.transition='transform 0.4s ease';
+  setTimeout(function(){icon.style.transform='rotate(360deg)';
+    setTimeout(function(){icon.style.transition='';icon.style.transform=''},400)},50);
+  await loadPapers();updateStats();
+  if(selectedId)selectPaper(selectedId);
+  toast('Papers refreshed');
+}
+
+// ── Folder selection ──
+var _folderCallback=null;
+function selectPdfFolder(){showFolderModal(null)}
+function closeFolderModal(){document.getElementById('folderModal').style.display='none';document.getElementById('folderModalMsg').textContent='';_folderCallback=null}
+function showFolderModal(cb){_folderCallback=cb;var cur=localStorage.getItem('litmanger_folder')||'';document.getElementById('folderPathInput').value=cur;document.getElementById('folderModal').style.display='flex';document.getElementById('folderModalMsg').textContent='';document.getElementById('folderPathInput').focus()}
+async function confirmFolder(){
+  var pathStr=document.getElementById('folderPathInput').value.trim();if(!pathStr){document.getElementById('folderModalMsg').textContent='Please enter a folder path.';return}
+  var btn=document.getElementById('folderModalOk');var orig=btn.textContent;btn.disabled=true;btn.textContent='...';
+  try{var r=await fetch('/api/set-folder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:pathStr})});var d=await r.json();
+    if(d.ok){localStorage.setItem('litmanger_folder',d.path);closeFolderModal();await loadPapers();updateStats();
+      if(d.matched_pdfs>0)toast('Folder set! Auto-linked '+d.matched_pdfs+' PDFs. '+d.paper_count+' papers loaded.');
+      else toast('Folder set! '+d.paper_count+' papers loaded.'+(d.migrated?' Data migrated.':''));
+      if(_folderCallback)_folderCallback(d);_folderCallback=null}
+    else{document.getElementById('folderModalMsg').textContent='Error: '+(d.error||'Unknown')}
+  }catch(e){document.getElementById('folderModalMsg').textContent='Network error: '+e.message}
+  btn.disabled=false;btn.textContent=orig;
+}
+function browseFolder(){
+  var inp=document.createElement('input');inp.type='file';inp.webkitdirectory=true;inp.directory=true;inp.style.display='none';
+  inp.onchange=function(){if(inp.files.length>0){var rp=inp.files[0].webkitRelativePath||'';var fn=rp.split('/')[0]||'';
+    document.getElementById('folderModalMsg').textContent='Folder "'+fn+'" selected. Paste full path above (copy from File Explorer).';
+    if(fn){var h=document.getElementById('folderPathInput');if(!h.value)h.placeholder='e.g., C:\\Users\\...\\'+fn}}
+    document.body.removeChild(inp)};
+  document.body.appendChild(inp);inp.click();
+}
   clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('on')},4000);
 }
 
 async function loadPapers(retries){
   if(retries===undefined)retries=0;
-  try{var r=await fetch('/api/papers');PAPERS=await r.json();renderPapers();updateStats()}catch(e){
+  try{
+    var ctrl=new AbortController();
+    var t=setTimeout(function(){ctrl.abort()},5000);
+    var r=await fetch('/api/papers',{signal:ctrl.signal});
+    clearTimeout(t);
+    PAPERS=await r.json();renderPapers();updateStats()
+  }catch(e){
     if(retries<5){console.log('loadPapers retry '+(retries+1)+'...');setTimeout(function(){loadPapers(retries+1)},500*(retries+1))}
     else{document.getElementById('paperList').innerHTML='<div class="ec" style="color:#ef4444">Failed to load papers. <a href="#" onclick="loadPapers(0);return false" style="color:var(--a)">Retry</a></div>'}
   }
@@ -212,7 +270,6 @@ async function loadConfig(){
 }
 
 function toggleDark(){document.body.classList.toggle('dark');localStorage.setItem('litmanager_dark',document.body.classList.contains('dark')?'1':'0')}
-if(localStorage.getItem('litmanager_dark')==='1')document.body.classList.add('dark');
 
 function updateStats(){
   if(!PAPERS.length){document.getElementById('statsBar').innerHTML='';return}
@@ -272,65 +329,81 @@ function renderPapers(){
 
 function getPaper(id){for(var i=0;i<PAPERS.length;i++)if(PAPERS[i].id===id)return PAPERS[i];return null}
 
+var _paperViewMode={};
+
 function selectPaper(id){
-  selectedId=id;renderPapers();var p=getPaper(id);if(!p)return;
-  var tb=document.getElementById('centerToolbar');
-  tb.innerHTML='<span style="font-weight:600">'+esc(p.title?p.title.substring(0,60)+'...':'')+'</span><span style="flex:1"></span><button class="btn btn-o btn-s" onclick="exportPaper(\''+p.id+'\')">Export</button><button class="btn btn-o btn-s" onclick="deletePaper(\''+p.id+'\')">Delete</button>';
-  var hasPdf=p.pdf_downloaded;
-  var c='';
+	  selectedId=id;renderPapers();var p=getPaper(id);if(!p)return;
+	  var tb=document.getElementById('centerToolbar');
+	  var tTitle=p.title||'Untitled';tb.innerHTML='<span style="font-weight:600" title="'+esc(p.title||'')+'">'+esc(tTitle.length>55?tTitle.substring(0,55)+'...':tTitle)+'</span><span style="flex:1"></span><button class="btn btn-o btn-s" onclick="exportPaper(\''+p.id+'\')">Export</button><button class="btn btn-o btn-s" onclick="deletePaper(\''+p.id+'\')">Delete</button>';
+	  var hasPdf=p.pdf_downloaded;
+	  var viewMode=_paperViewMode[id]||(hasPdf?'pdf':'info');
+	  if(viewMode==='pdf'&&hasPdf){
+	    _paperViewMode[id]='pdf';
+	    var c='<div style="display:flex;flex-direction:column;height:100%">';
+	    c+='<div style="flex:1;min-height:300px;display:flex;flex-direction:column">';
+	    c+='<div style="display:flex;gap:.25rem;align-items:center;padding:0 1rem .3rem"><h3 style="font-size:.7rem;color:var(--t2);text-transform:uppercase;flex:1">PDF Preview</h3><button class="btn btn-o btn-s" style="font-size:.65rem" onclick="showPaperInfo(\''+p.id+'\')">Info</button></div>';
+	    c+='<iframe src="/api/pdf/'+p.id+'" style="flex:1;border:none;background:#fff;min-height:250px"></iframe></div>';
+	    c+='<div style="padding:.5rem 1rem;border-top:1px solid var(--b);flex-shrink:0">';
+	    c+='<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.4rem">';
+	    c+='<button class="btn btn-p btn-s" onclick="showPdf(\''+p.id+'\')">Fullscreen</button>';
+	    c+='<button class="btn btn-p btn-s" onclick="downloadPdf(event,\''+p.id+'\',\''+(p.pdf_url||'').replace(/'/g,"\\'")+'\')">Re-download</button>';
+	    c+='<button class="btn btn-o btn-s" onclick="copyBibtex(\''+p.id+'\')">Copy BibTeX</button>';
+	    if(p.url)c+='<a class="btn btn-o btn-s" href="'+p.url+'" target="_blank">Source</a>';
+	    c+='</div>';
+	    c+='<div style="font-size:.78rem;color:var(--t2)"><b>'+esc(p.title||'Untitled')+'</b> &middot; '+(p.authors||[]).slice(0,2).join(', ')+' &middot; '+(p.journal||'')+(p.year?' ('+p.year+')':'')+'</div>';
+	    c+='</div></div>';
+	    document.getElementById('centerContent').innerHTML=c;
+	    document.getElementById('centerContent').className='cv';
+	  } else {
+	    _paperViewMode[id]='info';
+	    showPaperDetail(p);
+	  }
+	  document.getElementById('askPaperBtn').style.display='inline-flex';
+	  document.getElementById('tabsBar').style.display='flex';
+	  document.getElementById('mdEditor').value=p.md_notes||'';
+	  switchTab('md');
+	  loadComments(p.doi);
+	}
 
-  if(hasPdf){
-    // Split view: PDF top, metadata + buttons bottom
-    c='<div style="display:flex;flex-direction:column;height:100%">';
-    c+='<div style="flex:1;min-height:300px;display:flex;flex-direction:column">';
-    c+='<div style="display:flex;gap:.25rem;align-items:center;padding:0 1rem .3rem"><h3 style="font-size:.7rem;color:var(--t2);text-transform:uppercase;flex:1">PDF Preview</h3><button class="btn btn-o btn-s" style="font-size:.65rem" onclick="selectPaper(\''+p.id+'\')">Info</button></div>';
-    c+='<iframe src="/api/pdf/'+p.id+'" style="flex:1;border:none;background:#fff;min-height:250px"></iframe></div>';
-    // Metadata strip
-    c+='<div style="padding:.5rem 1rem;border-top:1px solid var(--b);flex-shrink:0">';
-    c+='<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.4rem">';
-    c+='<button class="btn btn-p btn-s" onclick="showPdf(\''+p.id+'\')">Fullscreen</button>';
-    c+='<button class="btn btn-p btn-s" onclick="downloadPdf(event,\''+p.id+'\',\''+(p.pdf_url||'').replace(/'/g,"\\'")+'\')">Re-download</button>';
-    c+='<button class="btn btn-o btn-s" onclick="copyBibtex(\''+p.id+'\')">Copy BibTeX</button>';
-    if(p.url)c+='<a class="btn btn-o btn-s" href="'+p.url+'" target="_blank">Source</a>';
-    c+='</div>';
-    c+='<div style="font-size:.78rem;color:var(--t2)"><b>'+esc(p.title)+'</b> &middot; '+(p.authors||[]).slice(0,2).join(', ')+' &middot; '+(p.journal||'')+(p.year?' ('+p.year+')':'')+'</div>';
-    c+='</div></div>';
-  } else {
-    // No PDF: standard detail view
-    c='<div class="dt">'+esc(p.title)+'</div>';
-    c+='<div class="dm"><b>Authors:</b> '+(p.authors||[]).join(', ')+'<br>';
-    if(p.journal)c+='<b>Journal:</b> '+esc(p.journal);if(p.year)c+=' ('+p.year+')';
-    if(p.volume)c+=' Vol.'+p.volume;if(p.pages)c+=', pp.'+p.pages;c+='<br>';
-    if(p.doi)c+='<b>DOI:</b> <a href="https://doi.org/'+p.doi+'" target="_blank" style="color:var(--a)">'+esc(p.doi)+'</a><br>';
-    if(p.arxiv_id)c+='<b>arXiv:</b> '+esc(p.arxiv_id)+'<br>';
-    c+='<b>Added:</b> '+(p.added||'N/A');
-    if(p.pdf_local)c+='<br><b>Local PDF:</b> <code style="font-size:.75rem">'+esc(p.pdf_local)+'</code>';
-    c+='</div>';
-    c+='<div style="margin-bottom:1rem"><b style="font-size:.82rem">Tags:</b> <div style="display:inline-flex;flex-wrap:wrap;gap:.2rem;margin-top:.25rem">';
-    if(p.tags){for(var i=0;i<p.tags.length;i++)c+='<span class="tag">'+esc(p.tags[i])+'<span class="del" onclick="event.stopPropagation();removeTag(\''+p.id+'\',\''+p.tags[i].replace(/'/g,"\\'")+'\')">x</span></span>'}
-    c+='<span class="tag-add" onclick="event.stopPropagation();addTag(\''+p.id+'\')">+ tag</span></div></div>';
-    c+='<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem">';
-    if(hasPdf)c+='<button class="btn btn-p btn-s" onclick="showPdf(\''+p.id+'\')">Preview PDF</button>';
-    if(p.pdf_url)c+='<button class="btn btn-p btn-s" onclick="downloadPdf(event,\''+p.id+'\',\''+(p.pdf_url||'').replace(/'/g,"\\'")+'\')">'+(hasPdf?'Re-download':'Download PDF')+'</button>';
-    if(!hasPdf&&p.pdf_url)c+='<button class="btn btn-o btn-s" onclick="openPdfUrl(\''+p.id+'\',\''+p.pdf_url.replace(/'/g,"\\'")+'\')">Open Online</button>';
-    if(p.pdf_url)c+='<button class="btn btn-o btn-s" onclick="markDownloaded(\''+p.id+'\')">Mark Done</button>';
-    c+='<button class="btn btn-o btn-s" onclick="copyBibtex(\''+p.id+'\')">Copy BibTeX</button>';
-    if(p.url)c+='<a class="btn btn-o btn-s" href="'+p.url+'" target="_blank">Source</a>';
-    c+='</div>';
-    if(p.abstract)c+='<div class="da">'+esc(p.abstract)+'</div>';
-    if(p.bibtex)c+='<div style="margin-bottom:1.2rem"><h3 style="font-size:.75rem;color:var(--t2);text-transform:uppercase;margin-bottom:.4rem">BibTeX</h3><div class="bb">'+esc(p.bibtex)+'</div></div>';
-  }
-  document.getElementById('centerContent').innerHTML=c;
-  document.getElementById('centerContent').className=hasPdf?'cc':'cv'; // not needed since we removed the class-based split
-  document.getElementById('askPaperBtn').style.display='inline-flex';
+function showPaperInfo(id){
+	  _paperViewMode[id]='info';
+	  var p=getPaper(id);if(!p)return;
+	  var tb=document.getElementById('centerToolbar');
+	  var tTitle=p.title||'Untitled';
+	  var hasPdf=p.pdf_downloaded;
+	  tb.innerHTML='<span style="font-weight:600" title="'+esc(p.title||'')+'">'+esc(tTitle.length>50?tTitle.substring(0,50)+'...':tTitle)+'</span><span style="flex:1"></span>'+(hasPdf?'<button class="btn btn-o btn-s" style="font-size:.65rem" onclick="selectPaper(\''+p.id+'\')">Back to PDF</button>':'')+'<button class="btn btn-o btn-s" onclick="exportPaper(\''+p.id+'\')">Export</button><button class="btn btn-o btn-s" onclick="deletePaper(\''+p.id+'\')">Delete</button>';
+	  showPaperDetail(p);
+	}
 
-  // Right panel: show tabs, load MD notes and comments
-  document.getElementById('tabsBar').style.display='flex';
-  document.getElementById('mdEditor').value=p.md_notes||'';
-  switchTab('md');
-  loadComments(p.doi);
-}
-
+function showPaperDetail(p){
+	  var hasPdf=p.pdf_downloaded;
+	  var c='<div style="max-width:780px;margin:0 auto;padding:1.2rem 1.8rem">';
+	  c+='<div style="font-size:1.35rem;font-weight:700;line-height:1.45;margin-bottom:.6rem;color:var(--t)">'+esc(p.title||'Untitled')+'</div>';
+	  c+='<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.8rem;font-size:.78rem;color:var(--t2)">';
+	  if(p.year)c+='<span>'+p.year+'</span>';
+	  if(p.journal)c+='<span>'+esc(p.journal)+(p.volume?' Vol.'+p.volume:'')+(p.pages?', pp.'+p.pages:'')+'</span>';
+	  if(p.doi)c+='<span><a href="https://doi.org/'+p.doi+'" target="_blank" style="color:var(--a)">'+esc(p.doi.substring(0,30))+'</a></span>';
+	  if(p.arxiv_id)c+='<span>arXiv: '+esc(p.arxiv_id)+'</span>';
+	  c+='</div>';
+	  c+='<div style="margin-bottom:.8rem;font-size:.85rem;color:var(--t);line-height:1.55">'+(p.authors||[]).join(', ')+'</div>';
+	  c+='<div style="margin-bottom:.8rem;display:flex;flex-wrap:wrap;gap:.2rem;align-items:center">';
+	  if(p.tags){for(var i=0;i<p.tags.length;i++)c+='<span class="tag">'+esc(p.tags[i])+'<span class="del" onclick="event.stopPropagation();removeTag(\''+p.id+'\',\''+p.tags[i].replace(/'/g,"\\'")+'\')">x</span></span>'}
+	  c+='<span class="tag-add" onclick="event.stopPropagation();addTag(\''+p.id+'\')">+ tag</span></div>';
+	  c+='<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.8rem">';
+	  if(hasPdf)c+='<button class="btn btn-p btn-s" onclick="selectPaper(\''+p.id+'\')">PDF</button>';
+	  if(p.pdf_url)c+='<button class="btn btn-p btn-s" onclick="downloadPdf(event,\''+p.id+'\',\''+(p.pdf_url||'').replace(/'/g,"\\'")+'\')">'+(hasPdf?'Re-download':'Download PDF')+'</button>';
+	  if(!hasPdf&&p.pdf_url)c+='<button class="btn btn-o btn-s" onclick="openPdfUrl(\''+p.id+'\',\''+(p.pdf_url||'').replace(/'/g,"\\'")+'\')">Open Online</button>';
+	  if(p.pdf_url)c+='<button class="btn btn-o btn-s" onclick="markDownloaded(\''+p.id+'\')">Mark Done</button>';
+	  c+='<button class="btn btn-o btn-s" onclick="copyBibtex(\''+p.id+'\')">Copy BibTeX</button>';
+	  if(p.url)c+='<a class="btn btn-o btn-s" href="'+p.url+'" target="_blank">Source</a>';
+	  c+='</div>';
+	  if(p.added)c+='<div style="font-size:.72rem;color:var(--t2);margin-bottom:.8rem">Added: '+p.added+'</div>';
+	  if(p.abstract)c+='<div style="margin-bottom:.9rem"><div style="font-size:.68rem;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.3rem;font-weight:600">Abstract</div><div style="font-size:.86rem;line-height:1.72;color:var(--t);background:var(--bg);padding:.7rem .85rem;border-radius:var(--r)">'+esc(p.abstract)+'</div></div>';
+	  if(p.bibtex)c+='<div style="margin-bottom:.8rem"><div style="font-size:.68rem;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.3rem;font-weight:600">BibTeX</div><div class="bb">'+esc(p.bibtex)+'</div></div>';
+	  c+='</div>';
+	  document.getElementById('centerContent').innerHTML=c;
+	  document.getElementById('centerContent').className='cc';
+	}
 async function addTag(id){var t=prompt('New tag:');if(!t)return;var p=getPaper(id);if(!p)return;var tags=(p.tags||[]).slice();tags.push(t);await updatePaper(id,{tags:tags})}
 async function removeTag(id,tag){var p=getPaper(id);if(!p)return;var tags=(p.tags||[]).filter(function(x){return x!==tag});await updatePaper(id,{tags:tags})}
 async function saveNotes(id){var notes=document.getElementById('noteEdit').value;await updatePaper(id,{notes:notes})}
@@ -634,16 +707,17 @@ document.getElementById('tBlur').addEventListener('input',function(){saveBgSetti
 var _origToggleDark=toggleDark;
 toggleDark=function(){_origToggleDark();applyTheme()};
 
-	document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function() {
 	  applyTheme();
 	  renderThemePresets();
 	  loadBgSettings();
 	  if(localStorage.getItem('litmanager_dark')==='1')document.body.classList.add('dark');
-	  loadPapers();
-	  loadConfig();
-	  renderChat();
-	  updateStats();
 	  localStorage.setItem('litmanager_server',window.location.origin);
+	  var app=document.getElementById('app');app.style.display='none';
+	  document.getElementById('splash').addEventListener('click',function(e){if(e.target.closest('#splashError'))return;enterApp()});
+	  var entered=localStorage.getItem('litmanger_entered');
+	  var savedFolder=localStorage.getItem('litmanger_folder');
+	  if(entered==='1'&&savedFolder)setTimeout(function(){enterApp()},300);
 	});
 
 // === Drag handles ===
@@ -659,4 +733,5 @@ toggleDark=function(){_origToggleDark();applyTheme()};
 })();
 document.addEventListener('keydown',function(e){if(e.key==='/'&&document.activeElement===document.body){e.preventDefault();document.getElementById('searchBox').focus()}});
 </script>
+<div id="folderModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.35);z-index:10001;align-items:center;justify-content:center"><div style="background:var(--p);border-radius:12px;padding:1.5rem;min-width:380px;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,0.15);display:flex;flex-direction:column;gap:0.75rem"><div style="font-weight:600;font-size:0.9rem">Select PDFs Folder</div><div style="font-size:0.75rem;color:var(--t2)">Choose a folder where PDFs and papers.json will be stored. Existing data will be migrated automatically.</div><div style="display:flex;gap:0.35rem"><input id="folderPathInput" type="text" placeholder="C:\Users\...\MyPapers" style="flex:1;padding:.4rem .6rem;border-radius:var(--r);font-size:.78rem" autocomplete="off"><button class="btn btn-o btn-s" onclick="browseFolder()" title="Browse...">Browse</button></div><div id="folderModalMsg" style="font-size:.7rem;color:var(--t2);min-height:1rem"></div><div style="display:flex;gap:.35rem;justify-content:flex-end"><button class="btn btn-o btn-s" onclick="closeFolderModal()">Cancel</button><button class="btn btn-p btn-s" id="folderModalOk" onclick="confirmFolder()">Select</button></div></div></div>
 </body></html>

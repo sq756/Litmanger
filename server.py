@@ -9,6 +9,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 import ssl
 import sys
 import threading
@@ -17,7 +18,21 @@ import urllib.parse
 import urllib.request
 from datetime import date
 from pathlib import Path
-import shutil
+
+# ── Import shared utilities from the litmanger package ──
+from litmanger.utils import (
+    BROWSER_HEADERS,
+    extract_doi_from_html,
+    extract_meta_name,
+    extract_meta_names,
+    make_ssl_context,
+    normalize_author_name,
+)
+from litmanger.fetcher import (
+    _guess_pdf_url,
+    fetch_bibtex,
+    fetch_crossref_metadata,
+)
 
 # When bundled by PyInstaller, use the exe's directory instead of __file__
 if getattr(sys, "frozen", False):
@@ -25,21 +40,77 @@ if getattr(sys, "frozen", False):
     # Data files for frozen builds are also in this directory (copied by build script)
 else:
     SCRIPT_DIR = Path(__file__).parent.resolve()
-DB_PATH = SCRIPT_DIR / "papers.json"
 CONFIG_PATH = SCRIPT_DIR / "config.json"
-COMMENTS_PATH = SCRIPT_DIR / "comments.json"
-IDENTITY_PATH = SCRIPT_DIR / "identity.json"
-PDF_DIR = SCRIPT_DIR / "pdfs"
-PDF_DIR.mkdir(exist_ok=True)
+FOLDER_PREF_PATH = SCRIPT_DIR / ".litmanger_folder"
 DOWNLOADS_DIR = Path.home() / "Downloads"
 PORT = 8766
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
-}
 
 # In-memory caches with lock
 _db_cache = None
 _db_lock = threading.Lock()
+
+# ── Path resolvers (lazy, based on user-chosen folder) ──
+
+def _folder_path():
+    """Return the user-chosen data folder, defaulting to SCRIPT_DIR."""
+    if FOLDER_PREF_PATH.exists():
+        try:
+            raw = FOLDER_PREF_PATH.read_text("utf-8").strip()
+            p = Path(raw)
+            if p.is_dir():
+                return p
+        except Exception:
+            pass
+    return SCRIPT_DIR
+
+
+def resolve_pdf_dir():
+    """Return the current PDF directory, creating it if needed."""
+    p = _folder_path() / "pdfs"
+    p.mkdir(exist_ok=True)
+    return p
+
+
+def resolve_db_path():
+    return _folder_path() / "papers.json"
+
+
+def resolve_comments_path():
+    return _folder_path() / "comments.json"
+
+
+def resolve_identity_path():
+    return _folder_path() / "identity.json"
+
+
+def _scan_folder_for_pdfs(folder, db):
+    """Scan a folder for PDFs and auto-match to papers in the database.
+    Returns a list of matched entries: [{"id": ..., "title": ..., "file": ...}, ...]
+    """
+    found = []
+    for fp in folder.glob("*.pdf"):
+        if not fp.is_file():
+            continue
+        fname = fp.stem.lower().replace(" ", "").replace("(", "").replace(")", "")
+        for p in db["papers"]:
+            pid = p.get("id", "").lower()
+            if pid and pid in fname:
+                if not p.get("pdf_downloaded"):
+                    normalized = folder / f"{p['id']}.pdf"
+                    try:
+                        if fp != normalized and fp.exists():
+                            shutil.copy2(fp, normalized)
+                    except OSError:
+                        pass
+                    p["pdf_downloaded"] = True
+                    p["pdf_local"] = str(normalized)
+                    found.append({
+                        "id": p["id"],
+                        "title": p.get("title", "")[:80],
+                        "file": fp.name,
+                    })
+                break
+    return found
 
 
 def load_db():
@@ -47,8 +118,9 @@ def load_db():
     with _db_lock:
         if _db_cache is not None:
             return _db_cache
-        if DB_PATH.exists():
-            with open(DB_PATH, "r", encoding="utf-8") as f:
+        db_path = resolve_db_path()
+        if db_path.exists():
+            with open(db_path, "r", encoding="utf-8") as f:
                 _db_cache = json.load(f)
         else:
             _db_cache = {"papers": []}
@@ -58,7 +130,7 @@ def load_db():
 def save_db(db):
     global _db_cache
     with _db_lock:
-        with open(DB_PATH, "w", encoding="utf-8") as f:
+        with open(resolve_db_path(), "w", encoding="utf-8") as f:
             json.dump(db, f, indent=2, ensure_ascii=False)
         _db_cache = db
 
@@ -75,13 +147,8 @@ def save_config(cfg):
         json.dump(cfg, f, indent=2, ensure_ascii=False)
 
 
-def make_ssl_context():
-    ctx = ssl.create_default_context()
-    return ctx
-
-
 def fetch_url(url, timeout=15):
-    req = urllib.request.Request(url, headers=HEADERS)
+    req = urllib.request.Request(url, headers=BROWSER_HEADERS)
     ctx = make_ssl_context()
     with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
         return resp.read().decode("utf-8", errors="replace"), resp.geturl()
@@ -99,40 +166,6 @@ def extract_doi(url):
     return None
 
 
-def extract_meta(html, name):
-    m = re.search(
-        r'<meta\s+name="' + re.escape(name) + r'"\s+content="([^"]+)"', html
-    )
-    return m.group(1) if m else None
-
-
-def fetch_bibtex(doi):
-    """Fetch BibTeX from Crossref API, with dx.doi.org fallback."""
-    try:
-        api_url = f"https://api.crossref.org/works/{urllib.parse.quote(doi, safe='')}/transform/application/x-bibtex"
-        req = urllib.request.Request(api_url, headers=HEADERS)
-        ctx = make_ssl_context()
-        with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
-            data = resp.read().decode("utf-8", errors="replace")
-            if data.strip().startswith("@"):
-                return data
-    except Exception:
-        pass
-    try:
-        req = urllib.request.Request(
-            f"https://dx.doi.org/{doi}",
-            headers={**HEADERS, "Accept": "text/bibliography; style=bibtex"},
-        )
-        ctx = make_ssl_context()
-        with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
-            data = resp.read().decode("utf-8", errors="replace")
-            if data.strip().startswith("<"):
-                return None
-            return data
-    except Exception:
-        return None
-
-
 def extract_arxiv_id(url):
     m = re.search(r"arxiv\.org/abs/([\d.]+)", url)
     return m.group(1) if m else None
@@ -140,92 +173,6 @@ def extract_arxiv_id(url):
 
 def is_arxiv(url):
     return "arxiv.org" in url
-
-
-def _extract_doi_from_html(html):
-    """Extract DOI from HTML page content when not in the URL."""
-    m = re.search(r'<meta\s+name="citation_doi"\s+content="([^"]+)"', html, re.I)
-    if m: return m.group(1).rstrip(".")
-    m = re.search(r"<meta\s+name='citation_doi'\s+content='([^']+)'", html, re.I)
-    if m: return m.group(1).rstrip(".")
-    m = re.search(r'doi\.org/(10\.\d{4,}/[^\s"\'<>]+)', html, re.I)
-    if m: return m.group(1).rstrip(".")
-    return None
-
-
-def _fetch_crossref_metadata(doi):
-    """Fetch paper metadata from Crossref API as fallback (title, authors, journal, year, abstract)."""
-    try:
-        api_url = f"https://api.crossref.org/works/{urllib.parse.quote(doi, safe='')}"
-        req = urllib.request.Request(api_url, headers=HEADERS)
-        ctx = make_ssl_context()
-        with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
-            result = json.loads(resp.read().decode("utf-8"))
-        msg = result.get("message", {})
-        if not msg:
-            return None
-        info = {}
-        if title_list := msg.get("title"):
-            info["title"] = title_list[0]
-        authors = []
-        for a in msg.get("author", []):
-            family = a.get("family", "")
-            given = a.get("given", "")
-            name = f"{given} {family}".strip() if given else family
-            if name: authors.append(name)
-        if authors: info["authors"] = authors
-        if container := msg.get("container-title"):
-            info["journal"] = container[0] if isinstance(container, list) else container
-        if pub_date := msg.get("published-print", {}).get("date-parts") or msg.get("created", {}).get("date-parts"):
-            if pub_date and pub_date[0]:
-                info["year"] = str(pub_date[0][0])
-                if len(pub_date[0]) > 1: info["month"] = str(pub_date[0][1])
-        if abstract := msg.get("abstract"):
-            abstract = re.sub(r"<[^>]+>", "", abstract)
-            info["abstract"] = abstract[:2000]
-        for key in ("volume", "issue", "pages", "publisher"):
-            if v := msg.get(key):
-                info[key] = str(v)
-        for link in msg.get("link", []):
-            if link.get("content-type") in ("application/pdf", "text/xml"):
-                info["pdf_url"] = link.get("URL", "")
-                break
-        return info
-    except Exception:
-        return None
-
-
-def _guess_pdf_url(page_url, doi, html):
-    """Guess the PDF URL for any publisher based on URL patterns and meta tags."""
-    url_lower = page_url.lower()
-    doi_suffix = doi.split("/")[-1] if doi else ""
-    pdf_meta = extract_meta(html, "citation_pdf_url") if html else None
-    if pdf_meta: return pdf_meta
-    if "nature.com" in url_lower: return f"https://www.nature.com/articles/{doi_suffix}.pdf"
-    if "aps.org" in url_lower: return f"https://journals.aps.org/prb/pdf/{doi}"
-    if "science.org" in url_lower or "sciencemag.org" in url_lower: return f"https://www.science.org/doi/pdf/{doi}"
-    if "ieee.org" in url_lower or "ieeexplore.ieee" in url_lower: return f"https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&arnumber={doi_suffix}"
-    if "acm.org" in url_lower: return f"https://dl.acm.org/doi/pdf/{doi}"
-    if "springer.com" in url_lower or "link.springer" in url_lower: return f"https://link.springer.com/content/pdf/{doi}.pdf"
-    if "sciencedirect.com" in url_lower or "elsevier" in url_lower: return f"https://www.sciencedirect.com/science/article/pii/{doi_suffix}/pdf"
-    if "wiley.com" in url_lower: return f"https://onlinelibrary.wiley.com/doi/pdfdirect/{doi}"
-    if "acs.org" in url_lower: return f"https://pubs.acs.org/doi/pdf/{doi}"
-    if "iop.org" in url_lower: return f"https://iopscience.iop.org/article/{doi}/pdf"
-    if "tandfonline.com" in url_lower: return f"https://www.tandfonline.com/doi/pdf/{doi}"
-    if "oup.com" in url_lower: return f"https://academic.oup.com/redirect/{doi}/pdf"
-    if "pnas.org" in url_lower: return f"https://www.pnas.org/doi/pdf/{doi}"
-    if "/abstract/" in page_url: return page_url.replace("/abstract/", "/pdf/")
-    if "/abs/" in page_url: return page_url.replace("/abs/", "/pdf/")
-    return f"https://doi.org/{doi}"
-
-
-def normalize_author_name(name):
-    """Convert 'LastName, FirstName' to 'FirstName LastName'."""
-    if "," in name:
-        parts = [p.strip() for p in name.split(",", 1)]
-        if len(parts) == 2:
-            return f"{parts[1]} {parts[0]}"
-    return name
 
 
 def collect_paper(url):
@@ -246,11 +193,11 @@ def collect_paper(url):
 
     # If page fetch failed, get metadata fromCrossref
     if not html and doi:
-        crossref_meta = _fetch_crossref_metadata(doi)
+        crossref_meta = fetch_crossref_metadata(doi)
 
     # If we have HTML but no DOI yet, extract from HTML
     if html and not doi and not arxiv_id:
-        doi = _extract_doi_from_html(html) or extract_doi(final_url)
+        doi = extract_doi_from_html(html) or extract_doi(final_url)
 
     # arXiv: extract DOI from arxiv-doi-link in HTML
     if arxiv_id and not doi and html:
@@ -268,14 +215,14 @@ def collect_paper(url):
 
     # Extract metadata
     if html:
-        title = extract_meta(html, "citation_title")
+        title = extract_meta_namehtml, "citation_title")
         if title:
             title = title.replace("&#39;", "'").replace("&amp;", "&").replace("&quot;", '"').replace("&lt;", "<").replace("&gt;", ">")
         authors = [normalize_author_name(a) for a in re.findall(r'<meta\s+name="citation_author"\s+content="([^"]+)"', html)]
-        journal = extract_meta(html, "citation_journal_title")
-        pub_date = extract_meta(html, "citation_date")
-        pdf_url_meta = extract_meta(html, "citation_pdf_url")
-        abstract = extract_meta(html, "citation_abstract")
+        journal = extract_meta_namehtml, "citation_journal_title")
+        pub_date = extract_meta_namehtml, "citation_date")
+        pdf_url_meta = extract_meta_namehtml, "citation_pdf_url")
+        abstract = extract_meta_namehtml, "citation_abstract")
     elif crossref_meta:
         title = crossref_meta.get("title")
         authors = crossref_meta.get("authors", [])
@@ -314,7 +261,7 @@ def collect_paper(url):
 
 def rename_pdf(paper):
     pid = paper.get("id", "")
-    old = PDF_DIR / f"{pid}.pdf"
+    old = resolve_pdf_dir() / f"{pid}.pdf"
     if not old.exists():
         return
     author = (
@@ -330,7 +277,7 @@ def rename_pdf(paper):
         .strip()
     )
     safe = f"{author}_{year}_{title}.pdf".replace(" ", "_")
-    new = PDF_DIR / safe
+    new = resolve_pdf_dir() / safe
     if new.exists():
         return
     try:
@@ -360,21 +307,23 @@ def mark_downloaded(paper_id, local_path=None):
 
 
 def load_comments():
-    if COMMENTS_PATH.exists():
-        with open(COMMENTS_PATH, "r", encoding="utf-8") as f:
+    cpath = resolve_comments_path()
+    if cpath.exists():
+        with open(cpath, "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
 
 
 def save_comments(comments):
-    with open(COMMENTS_PATH, "w", encoding="utf-8") as f:
+    with open(resolve_comments_path(), "w", encoding="utf-8") as f:
         json.dump(comments, f, indent=2, ensure_ascii=False)
 
 
 def load_identity():
     """Load or generate an Ed25519 keypair for this installation."""
-    if IDENTITY_PATH.exists():
-        with open(IDENTITY_PATH, "r", encoding="utf-8") as f:
+    ipath = resolve_identity_path()
+    if ipath.exists():
+        with open(ipath, "r", encoding="utf-8") as f:
             return json.load(f)
     # Generate new keypair using Python cryptography if available
     try:
@@ -404,7 +353,7 @@ def load_identity():
             "pubkey": base64.b64encode(hashlib.sha256(seed).digest()).decode("ascii"),
             "seed": base64.b64encode(seed).decode("ascii"),
         }
-    with open(IDENTITY_PATH, "w", encoding="utf-8") as f:
+    with open(resolve_identity_path(), "w", encoding="utf-8") as f:
         json.dump(ident, f, indent=2)
     return ident
 
@@ -495,6 +444,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(body)
 
@@ -504,6 +454,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", ct)
         self.send_header("Content-Length", str(len(data)))
+        self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(data)
 
@@ -607,7 +558,7 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
                     self._json({"error": "No url param"}, 400)
                     return
                 try:
-                    req = urllib.request.Request(remote_url, headers=HEADERS)
+                    req = urllib.request.Request(remote_url, headers=BROWSER_HEADERS)
                     ctx = make_ssl_context()
                     with urllib.request.urlopen(req, timeout=30, context=ctx) as resp:
                         data = resp.read()
@@ -616,7 +567,7 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
                         self._json({"error": "Journal returned HTML instead of PDF (Cloudflare / login wall). Open the PDF URL in your browser to download."}, 502)
                         return
                     if pid and data[:5] == b"%PDF-":
-                        save_path = PDF_DIR / f"{pid}.pdf"
+                        save_path = resolve_pdf_dir() / f"{pid}.pdf"
                         with open(save_path, "wb") as f:
                             f.write(data)
                         mark_downloaded(pid, str(save_path))
@@ -643,6 +594,16 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
                 self._json(load_db()["papers"])
                 return
 
+            if p.path == "/api/get-folder":
+                folder = _folder_path()
+                self._json({
+                    "path": str(folder),
+                    "pdf_dir": str(resolve_pdf_dir()),
+                    "has_papers": resolve_db_path().exists(),
+                    "is_default": folder == SCRIPT_DIR,
+                })
+                return
+
             if p.path == "/api/config":
                 cfg = load_config()
                 safe = dict(cfg)
@@ -656,7 +617,7 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
             if m:
                 clean_id = m.group(1)
                 # Try exact match first
-                fp = PDF_DIR / f"{clean_id}.pdf"
+                fp = resolve_pdf_dir() / f"{clean_id}.pdf"
                 if not fp.exists():
                     # Try papers.json to find the actual local path
                     db_papers = load_db()
@@ -668,7 +629,7 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
                     else:
                         # Last resort: find any PDF starting with this ID
                         candidates = sorted(
-                            PDF_DIR.glob(f"{clean_id}*.pdf"),
+                            resolve_pdf_dir().glob(f"{clean_id}*.pdf"),
                             key=lambda x: x.stat().st_mtime, reverse=True,
                         )
                         fp = candidates[0] if candidates else None
@@ -723,6 +684,54 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
             parsed = urllib.parse.urlparse(self.path)
             qs = urllib.parse.parse_qs(parsed.query)
 
+            # --- /api/set-folder ---
+            if parsed.path == "/api/set-folder":
+                try:
+                    d = json.loads(body.decode("utf-8"))
+                    new_path_str = d.get("path", "").strip()
+                    if not new_path_str:
+                        self._json({"ok": False, "error": "No path provided"}, 400)
+                        return
+                    new_path = Path(new_path_str).resolve()
+                    if not new_path.is_dir():
+                        self._json({"ok": False, "error": "Path is not a valid directory"}, 400)
+                        return
+                    FOLDER_PREF_PATH.write_text(str(new_path), encoding="utf-8")
+                    pdf_dir = new_path / "pdfs"
+                    pdf_dir.mkdir(exist_ok=True)
+                    target_db = new_path / "papers.json"
+                    old_db = SCRIPT_DIR / "papers.json"
+                    migrated = False
+                    if not target_db.exists() and old_db.exists():
+                        shutil.copy2(old_db, target_db)
+                        migrated = True
+                    target_comments = new_path / "comments.json"
+                    old_comments = SCRIPT_DIR / "comments.json"
+                    if not target_comments.exists() and old_comments.exists():
+                        shutil.copy2(old_comments, target_comments)
+                    target_identity = new_path / "identity.json"
+                    old_identity = SCRIPT_DIR / "identity.json"
+                    if not target_identity.exists() and old_identity.exists():
+                        shutil.copy2(old_identity, target_identity)
+                    global _db_cache
+                    with _db_lock:
+                        _db_cache = None
+                    db = load_db()
+                    matched = _scan_folder_for_pdfs(pdf_dir, db)
+                    if matched:
+                        save_db(db)
+                    self._json({
+                        "ok": True,
+                        "path": str(new_path),
+                        "pdf_dir": str(pdf_dir),
+                        "migrated": migrated,
+                        "matched_pdfs": len(matched),
+                        "paper_count": len(db["papers"]),
+                    })
+                except Exception as e:
+                    self._json({"ok": False, "error": str(e)}, 500)
+                return
+
             # --- /api/fetch-and-save ---
             if parsed.path == "/api/fetch-and-save":
                 try:
@@ -732,7 +741,7 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
                     if not remote_url or not pid:
                         self._json({"ok": False, "error": "Need url and id"}, 400)
                         return
-                    req = urllib.request.Request(remote_url, headers=HEADERS)
+                    req = urllib.request.Request(remote_url, headers=BROWSER_HEADERS)
                     ctx = make_ssl_context()
                     with urllib.request.urlopen(req, timeout=60, context=ctx) as resp:
                         data = resp.read()
@@ -749,7 +758,7 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
                             502,
                         )
                         return
-                    save_path = PDF_DIR / f"{pid}.pdf"
+                    save_path = resolve_pdf_dir() / f"{pid}.pdf"
                     with open(save_path, "wb") as f:
                         f.write(data)
                     mark_downloaded(pid, str(save_path))
@@ -845,10 +854,10 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
                                     # Strip trailing boundary markers but not content
                                     pdf_data = pdf_data.rstrip(b"\r\n-")
                                     fn = f"{pid}.pdf" if pid else "paper.pdf"
-                                    with open(PDF_DIR / fn, "wb") as f:
+                                    with open(resolve_pdf_dir() / fn, "wb") as f:
                                         f.write(pdf_data)
                                     if pid:
-                                        mark_downloaded(pid, str(PDF_DIR / fn))
+                                        mark_downloaded(pid, str(resolve_pdf_dir() / fn))
                                     self._json(
                                         {
                                             "ok": True,
@@ -860,9 +869,9 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
                 # Fallback: raw body
                 if pid and len(body) > 500:
                     fn = f"{pid}.pdf"
-                    with open(PDF_DIR / fn, "wb") as f:
+                    with open(resolve_pdf_dir() / fn, "wb") as f:
                         f.write(body)
-                    mark_downloaded(pid, str(PDF_DIR / fn))
+                    mark_downloaded(pid, str(resolve_pdf_dir() / fn))
                     self._json(
                         {"ok": True, "filename": fn, "size": len(body)}
                     )
@@ -955,7 +964,7 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
 
                     # 1. Check pdfs/ folder first
                     candidates = sorted(
-                        [fp for fp in PDF_DIR.glob(f"{pid}*.pdf") if fp.is_file()],
+                        [fp for fp in resolve_pdf_dir().glob(f"{pid}*.pdf") if fp.is_file()],
                         key=lambda x: (x.name != f"{pid}.pdf", -x.stat().st_mtime),
                     )
 
@@ -968,7 +977,7 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
 
                     if candidates:
                         best = candidates[0]
-                        normalized = PDF_DIR / f"{pid}.pdf"
+                        normalized = resolve_pdf_dir() / f"{pid}.pdf"
                         try:
                             if best != normalized:
                                 if best.exists():
@@ -977,7 +986,7 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
                                     best = normalized
                         except OSError:
                             pass
-                        paper_found["pdf_local"] = str(best.absolute() if best.parent != PDF_DIR else best)
+                        paper_found["pdf_local"] = str(best.absolute() if best.parent != resolve_pdf_dir() else best)
 
                     save_db(db)
                     self._json({"ok": True, "paper": paper_found})
@@ -991,7 +1000,7 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
                     found = []
                     db = load_db()
                     # Scan pdfs/ and Downloads/
-                    all_dirs = [PDF_DIR]
+                    all_dirs = [resolve_pdf_dir()]
                     if DOWNLOADS_DIR.exists():
                         all_dirs.append(DOWNLOADS_DIR)
                     for scan_dir in all_dirs:
@@ -1009,7 +1018,7 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
                                 # Try DOI-based match (last resort: PDF embedded metadata)
                                 continue
                             if not matched.get("pdf_downloaded"):
-                                normalized = PDF_DIR / f"{matched['id']}.pdf"
+                                normalized = resolve_pdf_dir() / f"{matched['id']}.pdf"
                                 try:
                                     import shutil
                                     if fp != normalized and fp.exists():
@@ -1034,7 +1043,7 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
                     db = load_db()
                     db["papers"] = [p for p in db["papers"] if p.get("id") != pid]
                     save_db(db)
-                    pdf_fp = PDF_DIR / f"{pid}.pdf"
+                    pdf_fp = resolve_pdf_dir() / f"{pid}.pdf"
                     if pdf_fp.exists():
                         pdf_fp.unlink()
                     self._json({"ok": True})
@@ -1224,7 +1233,7 @@ def main():
     print("")
     print("  ============================================")
     print(f"   LitManager  |  {url}")
-    print(f"   PDFs: {PDF_DIR}")
+    print(f"   PDFs: {resolve_pdf_dir()}")
     if used_port != PORT:
         print(f"   (Port {PORT} was in use, using {used_port} instead)")
     print(f"   Press Ctrl+C to stop")
