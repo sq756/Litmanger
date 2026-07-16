@@ -32,6 +32,7 @@ class Paper:
     tags: list[str] = dataclasses.field(default_factory=list)
     pdf_downloaded: bool = False
     pdf_local: str = ""
+    arxiv_id: str = ""
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> Paper:

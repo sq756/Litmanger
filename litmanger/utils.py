@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import logging
 import re
-import urllib.request
+import ssl
 import urllib.error
+import urllib.request
 from pathlib import Path
 
 logger = logging.getLogger("litmanger")
@@ -18,35 +19,77 @@ USER_AGENT = (
     "Chrome/120.0.0.0 Safari/537.36"
 )
 
+BROWSER_HEADERS = {
+    "User-Agent": USER_AGENT,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
 
-def fetch_page(url: str, timeout: int = 15) -> tuple[str, str]:
+
+def make_ssl_context() -> ssl.SSLContext:
+    """Return a default SSL context for HTTP requests."""
+    return ssl.create_default_context()
+
+
+def fetch_page(
+    url: str, timeout: int = 15, *, use_ssl_context: bool = False
+) -> tuple[str, str]:
     """Fetch a URL, returning (html, final_url)."""
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
+    headers = BROWSER_HEADERS
+    req = urllib.request.Request(url, headers=headers)
+    ctx = make_ssl_context() if use_ssl_context else None
+    with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
         return resp.read().decode("utf-8", errors="replace"), resp.geturl()
+
+
+def normalize_author_name(name: str) -> str:
+    """Convert 'LastName, FirstName' to 'FirstName LastName'."""
+    if "," in name:
+        parts = [p.strip() for p in name.split(",", 1)]
+        if len(parts) == 2:
+            return f"{parts[1]} {parts[0]}"
+    return name
 
 
 # ── DOI ───────────────────────────────────────────────────
 
 DOI_RE = re.compile(r"/(10\.\d{4,}/[^/?&#]+)")
+DOI_BARE_RE = re.compile(r"(10\.\d{4,}/[^?&#\"\'\s<>]+)")
+DOI_IN_HTML_RE = re.compile(r"doi\.org/(10\.\d{4,}/[^\s\"\'<>]+)", re.I)
+
+_STRIP_SUFFIXES = (".abstract", ".full", ".pdf", ".meta")
 
 
 def extract_doi(url: str) -> str | None:
     """Extract a DOI from a URL or text.
 
-    Examples:
-        https://journals.aps.org/prb/abstract/10.1103/PhysRevB.113.235157
-          → 10.1103/PhysRevB.113.235157
-        https://doi.org/10.1038/s41586-023-12345
-          → 10.1038/s41586-023-12345
-        10.1002/adma.202301234 → 10.1002/adma.202301234
+    Handles DOI.org URLs, journal URLs, and bare DOI strings.
+    Strips known non-DOI suffixes (.abstract, .full, .pdf, .meta).
     """
-    # Try the URL path pattern first
+    # Try URL-path pattern first (most precise)
     m = DOI_RE.search(url)
     if m:
         return m.group(1)
-    # Try bare DOI pattern anywhere in the text
-    m = re.search(r"(10\.\d{4,}/[^\s]+)", url)
+    # Try broad bare DOI pattern (handles paste text)
+    m = DOI_BARE_RE.search(url)
+    if m:
+        doi = m.group(1).rstrip(".")
+        for suffix in _STRIP_SUFFIXES:
+            if doi.endswith(suffix):
+                doi = doi[: -len(suffix)]
+        return doi
+    return None
+
+
+def extract_doi_from_html(html: str) -> str | None:
+    """Extract DOI from HTML page content (meta tags, links)."""
+    m = re.search(r'<meta\s+name="citation_doi"\s+content="([^"]+)"', html, re.I)
+    if m:
+        return m.group(1).rstrip(".")
+    m = re.search(r"<meta\s+name='citation_doi'\s+content='([^']+)'", html, re.I)
+    if m:
+        return m.group(1).rstrip(".")
+    m = DOI_IN_HTML_RE.search(html)
     if m:
         return m.group(1).rstrip(".")
     return None
