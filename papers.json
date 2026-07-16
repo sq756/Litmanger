@@ -25,9 +25,50 @@
         "phase transition",
         "machine learning"
       ],
-      "pdf_downloaded": false,
+      "pdf_downloaded": true,
       "notes": "",
-      "pdf_local": ""
+      "pdf_local": "E:\\Software\\Code\\Claude desk\\Litmanger\\pdfs\\fq4j-2p2l.pdf"
+    },
+    {
+      "id": "s41586-023-06747-5",
+      "title": "Solving olympiad geometry without human demonstrations",
+      "authors": [
+        "Trieu H. Trinh",
+        "Yuhuai Wu",
+        "Quoc V. Le",
+        "He He",
+        "Thang Luong"
+      ],
+      "journal": "Nature",
+      "doi": "10.1038/s41586-023-06747-5",
+      "url": "https://www.nature.com/articles/s41586-023-06747-5?error=cookies_not_supported&code=c0b095fd-c80d-48db-acd5-8552638aa50f",
+      "pdf_url": "https://www.nature.com/articles/s41586-023-06747-5.pdf",
+      "bibtex": " @article{Trinh_2024, title={Solving olympiad geometry without human demonstrations}, volume={625}, ISSN={1476-4687}, url={http://dx.doi.org/10.1038/s41586-023-06747-5}, DOI={10.1038/s41586-023-06747-5}, number={7995}, journal={Nature}, publisher={Springer Science and Business Media LLC}, author={Trinh, Trieu H. and Wu, Yuhuai and Le, Quoc V. and He, He and Luong, Thang}, year={2024}, month=Jan, pages={476–482} }\n",
+      "abstract": "",
+      "year": "",
+      "added": "2026-07-16",
+      "tags": [],
+      "pdf_downloaded": false,
+      "arxiv_id": null,
+      "volume": "625",
+      "issue": "7995",
+      "pages": "476–482"
+    },
+    {
+      "id": "science.adk8828",
+      "title": "Unknown",
+      "authors": [],
+      "journal": "",
+      "doi": "10.1126/science.adk8828",
+      "url": "https://www.science.org/doi/10.1126/science.adk8828",
+      "pdf_url": "https://www.science.org/doi/pdf/10.1126/science.adk8828",
+      "bibtex": "",
+      "abstract": "",
+      "year": "",
+      "added": "2026-07-16",
+      "tags": [],
+      "pdf_downloaded": false,
+      "arxiv_id": null
     }
   ]
 }

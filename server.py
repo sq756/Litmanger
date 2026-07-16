@@ -17,6 +17,7 @@ import urllib.parse
 import urllib.request
 from datetime import date
 from pathlib import Path
+import shutil
 
 # When bundled by PyInstaller, use the exe's directory instead of __file__
 if getattr(sys, "frozen", False):
@@ -87,11 +88,15 @@ def fetch_url(url, timeout=15):
 
 
 def extract_doi(url):
-    m = re.search(r"/(10\.\d{4,}/[^/?&#]+)", url)
+    """Extract DOI from any journal URL or bare DOI string."""
+    m = re.search(r"(10\.\d{4,}/[^?&#\"\'\s<>]+)", url)
     if m:
-        return m.group(1)
-    m = re.search(r"(10\.\d{4,}/[^\s]+)", url)
-    return m.group(1).rstrip(".") if m else None
+        doi = m.group(1).rstrip(".")
+        for suffix in (".abstract", ".full", ".pdf", ".meta"):
+            if doi.endswith(suffix):
+                doi = doi[:-len(suffix)]
+        return doi
+    return None
 
 
 def extract_meta(html, name):
@@ -137,6 +142,83 @@ def is_arxiv(url):
     return "arxiv.org" in url
 
 
+def _extract_doi_from_html(html):
+    """Extract DOI from HTML page content when not in the URL."""
+    m = re.search(r'<meta\s+name="citation_doi"\s+content="([^"]+)"', html, re.I)
+    if m: return m.group(1).rstrip(".")
+    m = re.search(r"<meta\s+name='citation_doi'\s+content='([^']+)'", html, re.I)
+    if m: return m.group(1).rstrip(".")
+    m = re.search(r'doi\.org/(10\.\d{4,}/[^\s"\'<>]+)', html, re.I)
+    if m: return m.group(1).rstrip(".")
+    return None
+
+
+def _fetch_crossref_metadata(doi):
+    """Fetch paper metadata from Crossref API as fallback (title, authors, journal, year, abstract)."""
+    try:
+        api_url = f"https://api.crossref.org/works/{urllib.parse.quote(doi, safe='')}"
+        req = urllib.request.Request(api_url, headers=HEADERS)
+        ctx = make_ssl_context()
+        with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+        msg = result.get("message", {})
+        if not msg:
+            return None
+        info = {}
+        if title_list := msg.get("title"):
+            info["title"] = title_list[0]
+        authors = []
+        for a in msg.get("author", []):
+            family = a.get("family", "")
+            given = a.get("given", "")
+            name = f"{given} {family}".strip() if given else family
+            if name: authors.append(name)
+        if authors: info["authors"] = authors
+        if container := msg.get("container-title"):
+            info["journal"] = container[0] if isinstance(container, list) else container
+        if pub_date := msg.get("published-print", {}).get("date-parts") or msg.get("created", {}).get("date-parts"):
+            if pub_date and pub_date[0]:
+                info["year"] = str(pub_date[0][0])
+                if len(pub_date[0]) > 1: info["month"] = str(pub_date[0][1])
+        if abstract := msg.get("abstract"):
+            abstract = re.sub(r"<[^>]+>", "", abstract)
+            info["abstract"] = abstract[:2000]
+        for key in ("volume", "issue", "pages", "publisher"):
+            if v := msg.get(key):
+                info[key] = str(v)
+        for link in msg.get("link", []):
+            if link.get("content-type") in ("application/pdf", "text/xml"):
+                info["pdf_url"] = link.get("URL", "")
+                break
+        return info
+    except Exception:
+        return None
+
+
+def _guess_pdf_url(page_url, doi, html):
+    """Guess the PDF URL for any publisher based on URL patterns and meta tags."""
+    url_lower = page_url.lower()
+    doi_suffix = doi.split("/")[-1] if doi else ""
+    pdf_meta = extract_meta(html, "citation_pdf_url") if html else None
+    if pdf_meta: return pdf_meta
+    if "nature.com" in url_lower: return f"https://www.nature.com/articles/{doi_suffix}.pdf"
+    if "aps.org" in url_lower: return f"https://journals.aps.org/prb/pdf/{doi}"
+    if "science.org" in url_lower or "sciencemag.org" in url_lower: return f"https://www.science.org/doi/pdf/{doi}"
+    if "ieee.org" in url_lower or "ieeexplore.ieee" in url_lower: return f"https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&arnumber={doi_suffix}"
+    if "acm.org" in url_lower: return f"https://dl.acm.org/doi/pdf/{doi}"
+    if "springer.com" in url_lower or "link.springer" in url_lower: return f"https://link.springer.com/content/pdf/{doi}.pdf"
+    if "sciencedirect.com" in url_lower or "elsevier" in url_lower: return f"https://www.sciencedirect.com/science/article/pii/{doi_suffix}/pdf"
+    if "wiley.com" in url_lower: return f"https://onlinelibrary.wiley.com/doi/pdfdirect/{doi}"
+    if "acs.org" in url_lower: return f"https://pubs.acs.org/doi/pdf/{doi}"
+    if "iop.org" in url_lower: return f"https://iopscience.iop.org/article/{doi}/pdf"
+    if "tandfonline.com" in url_lower: return f"https://www.tandfonline.com/doi/pdf/{doi}"
+    if "oup.com" in url_lower: return f"https://academic.oup.com/redirect/{doi}/pdf"
+    if "pnas.org" in url_lower: return f"https://www.pnas.org/doi/pdf/{doi}"
+    if "/abstract/" in page_url: return page_url.replace("/abstract/", "/pdf/")
+    if "/abs/" in page_url: return page_url.replace("/abs/", "/pdf/")
+    return f"https://doi.org/{doi}"
+
+
 def normalize_author_name(name):
     """Convert 'LastName, FirstName' to 'FirstName LastName'."""
     if "," in name:
@@ -151,81 +233,81 @@ def collect_paper(url):
         url = "https://doi.org/" + url
 
     arxiv_id = extract_arxiv_id(url) if is_arxiv(url) else None
-    doi = extract_doi(url) if not arxiv_id else None  # URL-based DOI (arxiv URLs don't have DOI in URL)
+    doi = extract_doi(url) if not arxiv_id else None
+
+    # Fetch the HTML page (with graceful fallback)
+    html = None
+    final_url = url
+    crossref_meta = None
+    try:
+        html, final_url = fetch_url(url)
+    except Exception:
+        pass  # Page blocked (403), try Crossref API below
+
+    # If page fetch failed, get metadata fromCrossref
+    if not html and doi:
+        crossref_meta = _fetch_crossref_metadata(doi)
+
+    # If we have HTML but no DOI yet, extract from HTML
+    if html and not doi and not arxiv_id:
+        doi = _extract_doi_from_html(html) or extract_doi(final_url)
+
+    # arXiv: extract DOI from arxiv-doi-link in HTML
+    if arxiv_id and not doi and html:
+        m = re.search(r'<a\s+[^>]*href="https?://doi\.org/(10\.\d{4,}/[^"]+)"[^>]*>', html, re.I)
+        if m: doi = m.group(1).rstrip(".")
 
     if not doi and not arxiv_id:
         return None, "Could not extract DOI or arXiv ID"
 
-    try:
-        html, final_url = fetch_url(url)
-    except Exception as e:
-        return None, f"Fetch failed: {e}"
-
-    # For arXiv pages, extract DOI from the HTML (arXiv doesn't use citation_doi meta tag)
-    # The DOI is in: <a href="https://doi.org/10.48550/arXiv.2603.28627" id="arxiv-doi-link">
-    if arxiv_id and not doi:
-        m = re.search(r'<a\s+[^>]*href="https?://doi\.org/(10\.\d{4,}/[^"]+)"[^>]*>', html, re.I)
-        if m:
-            doi = m.group(1).rstrip(".")
-        else:
-            # Fallback: search for any arXiv DOI pattern in the HTML
-            m = re.search(r'(10\.\d{4,}/arXiv\.[\d.]+)', html)
-            if m:
-                doi = m.group(1).rstrip(".")
-
     # Check if already in library
     db = load_db()
     for p in db["papers"]:
-        if arxiv_id and p.get("arxiv_id") == arxiv_id:
-            return p, None
-        if doi and p.get("doi") == doi:
-            return p, None
+        if arxiv_id and p.get("arxiv_id") == arxiv_id: return p, None
+        if doi and p.get("doi") == doi: return p, None
 
-    title = extract_meta(html, "citation_title")
-    # Decode HTML entities (e.g. &#39; → ')
-    if title:
-        title = title.replace("&#39;", "'").replace("&amp;", "&").replace("&quot;", "\"").replace("&lt;", "<").replace("&gt;", ">")
-    authors = re.findall(r'<meta\s+name="citation_author"\s+content="([^"]+)"', html)
-    authors = [normalize_author_name(a) for a in authors]
-    journal = extract_meta(html, "citation_journal_title")
-    pub_date = extract_meta(html, "citation_date")
-    pdf_url_meta = extract_meta(html, "citation_pdf_url")
-    abstract = extract_meta(html, "citation_abstract")
+    # Extract metadata
+    if html:
+        title = extract_meta(html, "citation_title")
+        if title:
+            title = title.replace("&#39;", "'").replace("&amp;", "&").replace("&quot;", '"').replace("&lt;", "<").replace("&gt;", ">")
+        authors = [normalize_author_name(a) for a in re.findall(r'<meta\s+name="citation_author"\s+content="([^"]+)"', html)]
+        journal = extract_meta(html, "citation_journal_title")
+        pub_date = extract_meta(html, "citation_date")
+        pdf_url_meta = extract_meta(html, "citation_pdf_url")
+        abstract = extract_meta(html, "citation_abstract")
+    elif crossref_meta:
+        title = crossref_meta.get("title")
+        authors = crossref_meta.get("authors", [])
+        journal = crossref_meta.get("journal")
+        pub_date = None
+        pdf_url_meta = crossref_meta.get("pdf_url")
+        abstract = crossref_meta.get("abstract")
+        if crossref_meta.get("year"):
+            pub_date = crossref_meta["year"]
+            if crossref_meta.get("month"): pub_date += "/" + crossref_meta["month"]
+    else:
+        title, authors, journal, pub_date, pdf_url_meta, abstract = "Unknown", [], "", None, None, None
+
     bibtex = fetch_bibtex(doi) if doi else None
-
     pid = arxiv_id if arxiv_id else doi.split("/")[-1]
 
     if arxiv_id:
         pdf_default = f"https://arxiv.org/pdf/{arxiv_id}"
-        if not journal:
-            journal = "arXiv"
+        if not journal: journal = "arXiv"
     else:
-        pdf_default = f"https://journals.aps.org/prb/pdf/{doi}"
+        pdf_default = _guess_pdf_url(final_url, doi, html)
 
     year = pub_date.split("/")[0] if pub_date else ""
-
-    paper = {
-        "id": pid,
-        "title": title or "Unknown",
-        "authors": authors or [],
-        "journal": journal or "",
-        "doi": doi or "",
-        "url": final_url,
-        "pdf_url": pdf_url_meta or pdf_default,
-        "bibtex": bibtex or "",
-        "abstract": abstract or "",
-        "year": year,
-        "added": str(date.today()),
-        "tags": [],
-        "pdf_downloaded": False,
-        "arxiv_id": arxiv_id,
-    }
+    paper = {"id": pid, "title": title or "Unknown", "authors": authors or [], "journal": journal or "",
+             "doi": doi or "", "url": final_url, "pdf_url": pdf_url_meta or pdf_default,
+             "bibtex": bibtex or "", "abstract": abstract or "", "year": year,
+             "added": str(date.today()), "tags": [], "pdf_downloaded": False, "arxiv_id": arxiv_id}
 
     if bibtex:
         for fld, key in [("volume", "volume"), ("number", "issue"), ("pages", "pages")]:
             m = re.search(rf"{fld}\s*=\s*\{{([^}}]+)\}}", bibtex)
-            if m:
-                paper[key] = m.group(1)
+            if m: paper[key] = m.group(1)
 
     return paper, None
 
