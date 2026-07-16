@@ -1244,22 +1244,6 @@ def main():
         server.serve_forever()
     except KeyboardInterrupt:
         print("\nServer stopped.")
-        print(f"   (Port {PORT} was in use, using {used_port} instead)")
-    print("   Press Ctrl+C to stop")
-    print("  ============================================")
-    print("")
-
-    # Auto-open browser
-    try:
-        webbrowser.open(url)
-    except Exception:
-        pass
-
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        print("\nServer stopped.")
-
 
 if __name__ == "__main__":
     main()
