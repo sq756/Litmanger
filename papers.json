@@ -26,7 +26,8 @@
         "machine learning"
       ],
       "pdf_downloaded": false,
-      "notes": ""
+      "notes": "",
+      "pdf_local": ""
     },
     {
       "id": "2603.28627",
@@ -51,9 +52,9 @@
       "year": "",
       "added": "2026-07-16",
       "tags": [],
-      "pdf_downloaded": true,
+      "pdf_downloaded": false,
       "arxiv_id": "2603.28627",
-      "pdf_local": "E:\\Software\\Code\\Claude desk\\litmanager\\pdfs\\2603.28627.pdf"
+      "pdf_local": ""
     }
   ]
 }

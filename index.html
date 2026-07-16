@@ -176,7 +176,9 @@ function selectPaper(id){
   // Actions
   c+='<div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1rem">';
   if(p.pdf_downloaded)c+='<button class="btn btn-p btn-s" onclick="showPdf(\''+p.id+'\')">Preview PDF</button>';
-  c+='<button class="btn btn-p btn-s" onclick="downloadPdf(event,\''+p.id+'\',\''+(p.pdf_url||'').replace(/'/g,"\\'")+'\')">'+(p.pdf_downloaded?'Re-download':'Download PDF')+'</button>';
+  if(p.pdf_url)c+='<button class="btn btn-p btn-s" onclick="downloadPdf(event,\''+p.id+'\',\''+(p.pdf_url||'').replace(/'/g,"\\'")+'\')">'+(p.pdf_downloaded?'Re-download':'Download PDF')+'</button>';
+  if(!p.pdf_downloaded && p.pdf_url)c+='<button class="btn btn-o btn-s" onclick="openPdfUrl(\''+p.id+'\',\''+p.pdf_url.replace(/'/g,"\\'")+'\')">Open Online</button>';
+  if(p.pdf_url)c+='<button class="btn btn-o btn-s" onclick="markDownloaded(\''+p.id+'\')">Mark Done</button>';
   c+='<button class="btn btn-o btn-s" onclick="copyBibtex(\''+p.id+'\')">Copy BibTeX</button>';
   if(p.url)c+='<a class="btn btn-o btn-s" href="'+p.url+'" target="_blank">Source</a>';
   c+='</div>';
@@ -202,6 +204,8 @@ async function downloadPdf(e,id,pdfUrl){
 }
 
 function showPdf(id){document.getElementById('centerContent').innerHTML='<div style="margin-bottom:1.2rem"><h3 style="font-size:0.75rem;color:var(--t2);text-transform:uppercase;margin-bottom:0.4rem">PDF Preview</h3><div style="margin-bottom:0.5rem"><button class="btn btn-o btn-s" onclick="selectPaper(\''+id+'\')">Back to Details</button></div><iframe class="pdf-frame" src="/api/pdf/'+id+'" style="width:100%;height:600px;border:none;background:#fff"></iframe></div>'}
+function openPdfUrl(id,url){window.open(url,'_blank');toast('PDF opened. Use Ctrl+S to save to pdfs/ folder. Then click Mark Done.')}
+async function markDownloaded(id){try{var r=await fetch('/api/papers/mark-downloaded',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})});var d=await r.json();if(d.ok){await loadPapers();selectPaper(id);toast('Marked as downloaded!')}else toast('Error: '+d.error)}catch(e){toast('Failed: '+e.message)}}
 
 async function addPaper(e){
   var inp=document.getElementById('addUrl');var url=inp.value.trim();if(!url){toast('Paste a URL first');return}

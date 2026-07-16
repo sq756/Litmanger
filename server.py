@@ -291,7 +291,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     ctx = make_ssl_context()
                     with urllib.request.urlopen(req, timeout=30, context=ctx) as resp:
                         data = resp.read()
-                    if pid:
+                    # Validate it's actually a PDF
+                    if data[:100].lstrip().startswith(b"<!DOCTYPE") or data[:100].lstrip().startswith(b"<html"):
+                        self._json({"error": "Journal returned HTML instead of PDF (Cloudflare / login wall). Open the PDF URL in your browser to download."}, 502)
+                        return
+                    if pid and data[:5] == b"%PDF-":
                         save_path = PDF_DIR / f"{pid}.pdf"
                         with open(save_path, "wb") as f:
                             f.write(data)
@@ -378,6 +382,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     ctx = make_ssl_context()
                     with urllib.request.urlopen(req, timeout=60, context=ctx) as resp:
                         data = resp.read()
+                    # Validate: reject HTML responses (Cloudflare / login walls)
+                    if data[:100].lstrip().startswith(b"<!DOCTYPE") or data[:100].lstrip().startswith(b"<html"):
+                        self._json(
+                            {"ok": False, "error": "Journal page returned instead of PDF (Cloudflare / login required). Open in browser to download manually."},
+                            502,
+                        )
+                        return
+                    if not data[:5] == b"%PDF-":
+                        self._json(
+                            {"ok": False, "error": "Response is not a valid PDF file."},
+                            502,
+                        )
+                        return
                     save_path = PDF_DIR / f"{pid}.pdf"
                     with open(save_path, "wb") as f:
                         f.write(data)
@@ -561,6 +578,30 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     if k and len(k) > 8:
                         safe["api_key"] = k[:4] + "****" + k[-4:]
                     self._json({"ok": True, "config": safe})
+                except Exception as e:
+                    self._json({"ok": False, "error": str(e)}, 500)
+                return
+
+            # --- /api/papers/mark-downloaded ---
+            if parsed.path == "/api/papers/mark-downloaded":
+                try:
+                    d = json.loads(body.decode("utf-8"))
+                    pid = d.get("id", "")
+                    db = load_db()
+                    for p in db["papers"]:
+                        if p.get("id") == pid:
+                            p["pdf_downloaded"] = True
+                            # Check if user placed a PDF manually in pdfs/
+                            candidates = sorted(
+                                [fp for fp in PDF_DIR.glob(f"{pid}*") if fp.suffix.lower() == ".pdf"],
+                                key=lambda x: x.stat().st_mtime, reverse=True,
+                            )
+                            if candidates:
+                                p["pdf_local"] = str(candidates[0])
+                            save_db(db)
+                            self._json({"ok": True, "paper": p})
+                            return
+                    self._json({"ok": False, "error": "Paper not found"}, 404)
                 except Exception as e:
                     self._json({"ok": False, "error": str(e)}, 500)
                 return
