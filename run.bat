@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 
 set "ROOT=%~dp0"
 
@@ -18,20 +18,24 @@ echo.
 echo   Litmanger
 echo   ---------
 echo.
-echo   run server     Start dashboard
-echo   run list       List all papers
-echo   run html       Generate static HTML
-echo   run watch      Auto-archive downloaded PDFs
-echo   run ^<URL^>      Add a paper
+echo   Type: server   to start the dashboard
+echo         list     to list all papers
+echo         html     to generate static HTML
+echo         watch    to auto-archive downloaded PDFs
+echo         ^<URL^>    to add a paper
 echo.
-set /p URL="Paste paper URL (or command): "
-if "%URL%"=="" exit /b
+set /p INPUT="^> "
+if "!INPUT!"=="" exit /b
 
-if /i "%URL%"=="server" goto server
-if /i "%URL%"=="list"   goto list
-if /i "%URL%"=="html"   goto html
-if /i "%URL%"=="watch"  goto watch
-python -m litmanger "%URL%"
+rem Strip "run " prefix if user typed it
+set "CMD=!INPUT!"
+if /i "!CMD:~0,4!"=="run " set "CMD=!CMD:~4!"
+
+if /i "!CMD!"=="server" goto server
+if /i "!CMD!"=="list"   goto list
+if /i "!CMD!"=="html"   goto html
+if /i "!CMD!"=="watch"  goto watch
+python -m litmanger "!CMD!"
 goto end
 
 :server
@@ -41,12 +45,12 @@ start http://127.0.0.1:8765
 goto end
 
 :html
-python -m litmanger --html
+python -m litmanger html
 start "" "%ROOT%paper_library.html"
 goto end
 
 :list
-python -m litmanger --list
+python -m litmanger list
 goto end
 
 :watch

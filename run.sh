@@ -16,11 +16,11 @@ case "${1:-}" in
     server)
         python -m litmanger server
         ;;
-    list|--list)
-        python -m litmanger --list
+    list|ls)
+        python -m litmanger list
         ;;
-    html|--html)
-        python -m litmanger --html
+    html)
+        python -m litmanger html
         ;;
     watch)
         echo "Watching Downloads folder..."
