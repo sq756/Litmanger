@@ -210,19 +210,21 @@ def collect_paper(url):
     # Check if already in library
     db = load_db()
     for p in db["papers"]:
-        if arxiv_id and p.get("arxiv_id") == arxiv_id: return p, None
-        if doi and p.get("doi") == doi: return p, None
+        if arxiv_id and p.get("arxiv_id") == arxiv_id:
+            return p, None
+        if doi and p.get("doi") == doi:
+            return p, None
 
     # Extract metadata
     if html:
-        title = extract_meta_namehtml, "citation_title")
+        title = extract_meta_name(html, "citation_title")
         if title:
             title = title.replace("&#39;", "'").replace("&amp;", "&").replace("&quot;", '"').replace("&lt;", "<").replace("&gt;", ">")
         authors = [normalize_author_name(a) for a in re.findall(r'<meta\s+name="citation_author"\s+content="([^"]+)"', html)]
-        journal = extract_meta_namehtml, "citation_journal_title")
-        pub_date = extract_meta_namehtml, "citation_date")
-        pdf_url_meta = extract_meta_namehtml, "citation_pdf_url")
-        abstract = extract_meta_namehtml, "citation_abstract")
+        journal = extract_meta_name(html, "citation_journal_title")
+        pub_date = extract_meta_name(html, "citation_date")
+        pdf_url_meta = extract_meta_name(html, "citation_pdf_url")
+        abstract = extract_meta_name(html, "citation_abstract")
     elif crossref_meta:
         title = crossref_meta.get("title")
         authors = crossref_meta.get("authors", [])
@@ -232,7 +234,8 @@ def collect_paper(url):
         abstract = crossref_meta.get("abstract")
         if crossref_meta.get("year"):
             pub_date = crossref_meta["year"]
-            if crossref_meta.get("month"): pub_date += "/" + crossref_meta["month"]
+            if crossref_meta.get("month"):
+                pub_date += "/" + crossref_meta["month"]
     else:
         title, authors, journal, pub_date, pdf_url_meta, abstract = "Unknown", [], "", None, None, None
 
@@ -241,7 +244,8 @@ def collect_paper(url):
 
     if arxiv_id:
         pdf_default = f"https://arxiv.org/pdf/{arxiv_id}"
-        if not journal: journal = "arXiv"
+        if not journal:
+            journal = "arXiv"
     else:
         pdf_default = _guess_pdf_url(final_url, doi, html)
 
