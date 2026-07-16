@@ -1214,24 +1214,41 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
 def main():
     import webbrowser
 
-    # Always use port 8766 for a predictable, bookmarkable URL
+    url = "http://localhost:8766"
+
+    # Try to bind port 8766
     try:
         server = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
         server.allow_reuse_address = True
     except OSError:
-        print("")
-        print(f"  ERROR: Port {PORT} is in use. Close the other Litmanger window first.")
-        print("")
-        input("  Press Enter to exit...")
+        # Port is occupied — check if it's an existing Litmanger instance
+        try:
+            req = urllib.request.Request(f"http://127.0.0.1:{PORT}/api/get-folder")
+            with urllib.request.urlopen(req, timeout=2) as resp:
+                json.loads(resp.read())
+            # It's already running — just open browser to the existing instance
+            webbrowser.open(url)
+            return
+        except Exception:
+            pass
+        # Port occupied by something else — alert the user
+        if sys.platform == "win32":
+            try:
+                import ctypes
+                ctypes.windll.user32.MessageBoxW(
+                    0, f"Port {PORT} is in use by another application.\nClose it first, or restart your computer.", "Litmanger", 0x30
+                )
+            except Exception:
+                print(f"ERROR: Port {PORT} is in use by another application.")
+        else:
+            print(f"\n  ERROR: Port {PORT} is in use by another application.")
+            input("  Press Enter to exit...")
         return
 
-    url = "http://localhost:8766"
     print("")
     print("  ============================================")
     print(f"   LitManager  |  {url}")
     print("  ============================================")
-    print("")
-    print("  Bookmark: http://localhost:8766")
     print("")
 
     # Auto-open browser
@@ -1239,6 +1256,10 @@ def main():
         webbrowser.open(url)
     except Exception:
         pass
+
+    print("  Server started. Keep this window open.")
+    print("  Bookmark: http://localhost:8766")
+    print("")
 
     try:
         server.serve_forever()
