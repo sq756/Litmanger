@@ -17,18 +17,17 @@ import urllib.request
 from datetime import date
 from pathlib import Path
 
-# ── Import shared utilities from the litmanger package ──
+from litmanger.fetcher import (
+    _guess_pdf_url,
+    fetch_bibtex,
+    fetch_crossref_metadata,
+)
 from litmanger.utils import (
     BROWSER_HEADERS,
     extract_doi_from_html,
     extract_meta_name,
     make_ssl_context,
     normalize_author_name,
-)
-from litmanger.fetcher import (
-    _guess_pdf_url,
-    fetch_bibtex,
-    fetch_crossref_metadata,
 )
 
 # When bundled by PyInstaller, use the exe's directory instead of __file__
