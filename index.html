@@ -89,6 +89,7 @@ input:focus,textarea:focus{border-color:var(--a)}
 <div class="menu-item" onclick="exportAllJson();toggleMenu()">Export JSON</div>
 <div class="menu-item" onclick="downloadAllPdfs();toggleMenu()">Download All PDFs</div>
 <div class="menu-item" onclick="generateHtml();toggleMenu()">Static HTML</div>
+<div class="menu-item" onclick="scanDownloads();toggleMenu()">Auto-Scan PDFs</div>
 <div style="border-top:1px solid var(--b)"></div>
 <div class="menu-item" onclick="if(confirm('Refresh?')){loadPapers();updateStats()};toggleMenu()">Refresh</div>
 </div></div>
@@ -280,8 +281,16 @@ async function downloadPdf(e,id,pdfUrl){
 }
 
 function showPdf(id){document.getElementById('centerContent').innerHTML='<div style="margin-bottom:1.2rem"><h3 style="font-size:.75rem;color:var(--t2);text-transform:uppercase;margin-bottom:.4rem">PDF Preview</h3><div style="margin-bottom:.5rem"><button class="btn btn-o btn-s" onclick="selectPaper(\''+id+'\')">Back to Details</button></div><iframe class="pdf-frame" src="/api/pdf/'+id+'" style="width:100%;height:600px;border:none;background:#fff"></iframe></div>'}
-function openPdfUrl(id,url){window.open(url,'_blank');toast('Save PDF to pdfs/ folder, then click Mark Done.')}
-async function markDownloaded(id){try{var r=await fetch('/api/papers/mark-downloaded',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})});var d=await r.json();if(d.ok){await loadPapers();selectPaper(id);toast('Marked as downloaded!')}else toast('Error: '+d.error)}catch(e){toast('Failed: '+e.message)}}
+function openPdfUrl(id,url){window.open(url,'_blank');toast('PDF opened in browser. Save to pdfs/ or Downloads, then click Mark Done.')}
+async function markDownloaded(id){try{var r=await fetch('/api/papers/mark-downloaded',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})});var d=await r.json();if(d.ok){await loadPapers();selectPaper(id);toast('PDF found and linked! Preview now available.')}else toast('Not found: '+d.error+'. Save the PDF first then try again.')}catch(e){toast('Failed: '+e.message)}}
+
+// Auto-scan helper — user facing
+async function scanDownloads(){
+  toast('Scanning Downloads and pdfs folders...');
+  try{var r=await fetch('/api/scan-pdfs',{method:'POST'});var d=await r.json();
+    if(d.ok&&d.matched.length){toast('Auto-linked '+d.matched.length+' PDFs!');await loadPapers()}else{toast('No new PDFs found. Save PDFs to Downloads/ folder and try again.')}
+  }catch(e){toast('Scan failed: '+e.message)}
+}
 
 async function addPaper(e){
   var inp=document.getElementById('addUrl');var url=inp.value.trim();if(!url){toast('Paste a URL first');return}

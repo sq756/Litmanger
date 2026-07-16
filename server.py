@@ -30,6 +30,7 @@ COMMENTS_PATH = SCRIPT_DIR / "comments.json"
 IDENTITY_PATH = SCRIPT_DIR / "identity.json"
 PDF_DIR = SCRIPT_DIR / "pdfs"
 PDF_DIR.mkdir(exist_ok=True)
+DOWNLOADS_DIR = Path.home() / "Downloads"
 PORT = 8766
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
@@ -736,29 +737,86 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     d = json.loads(body.decode("utf-8"))
                     pid = d.get("id", "")
                     db = load_db()
+                    paper_found = None
                     for p in db["papers"]:
                         if p.get("id") == pid:
-                            p["pdf_downloaded"] = True
-                            # Find any PDF starting with this ID, prefer exact match
-                            candidates = sorted(
-                                [fp for fp in PDF_DIR.glob(f"{pid}*.pdf") if fp.is_file()],
-                                key=lambda x: (x.name != f"{pid}.pdf", -x.stat().st_mtime),
-                            )
-                            if candidates:
-                                best = candidates[0]
-                                # Normalize: rename 'fq4j-2p2l (1).pdf' -> 'fq4j-2p2l.pdf'
-                                normalized = PDF_DIR / f"{pid}.pdf"
-                                if best != normalized:
-                                    try:
-                                        best.replace(normalized)
-                                        best = normalized
-                                    except OSError:
-                                        pass  # keep original name if rename fails
-                                p["pdf_local"] = str(best)
-                            save_db(db)
-                            self._json({"ok": True, "paper": p})
-                            return
-                    self._json({"ok": False, "error": "Paper not found"}, 404)
+                            paper_found = p
+                            break
+                    if not paper_found:
+                        self._json({"ok": False, "error": "Paper not found"}, 404)
+                        return
+
+                    paper_found["pdf_downloaded"] = True
+
+                    # 1. Check pdfs/ folder first
+                    candidates = sorted(
+                        [fp for fp in PDF_DIR.glob(f"{pid}*.pdf") if fp.is_file()],
+                        key=lambda x: (x.name != f"{pid}.pdf", -x.stat().st_mtime),
+                    )
+
+                    # 2. Also check Downloads folder
+                    if DOWNLOADS_DIR.exists():
+                        for dl in sorted(
+                            DOWNLOADS_DIR.glob("*.pdf"), key=lambda x: x.stat().st_mtime, reverse=True
+                        ):
+                            candidates.append(dl)
+
+                    if candidates:
+                        best = candidates[0]
+                        normalized = PDF_DIR / f"{pid}.pdf"
+                        try:
+                            if best != normalized:
+                                if best.exists():
+                                    import shutil
+                                    shutil.copy2(best, normalized)
+                                    best = normalized
+                        except OSError:
+                            pass
+                        paper_found["pdf_local"] = str(best.absolute() if best.parent != PDF_DIR else best)
+
+                    save_db(db)
+                    self._json({"ok": True, "paper": paper_found})
+                except Exception as e:
+                    self._json({"ok": False, "error": str(e)}, 500)
+                return
+
+            # --- /api/scan-pdfs ---
+            if parsed.path == "/api/scan-pdfs":
+                try:
+                    found = []
+                    db = load_db()
+                    # Scan pdfs/ and Downloads/
+                    all_dirs = [PDF_DIR]
+                    if DOWNLOADS_DIR.exists():
+                        all_dirs.append(DOWNLOADS_DIR)
+                    for scan_dir in all_dirs:
+                        for fp in scan_dir.glob("*.pdf"):
+                            if not fp.is_file():
+                                continue
+                            fname = fp.stem.lower().replace(" ", "").replace("(", "").replace(")", "")
+                            matched = None
+                            for p in db["papers"]:
+                                pid = p.get("id", "").lower()
+                                if pid and pid in fname:
+                                    matched = p
+                                    break
+                            if not matched:
+                                # Try DOI-based match (last resort: PDF embedded metadata)
+                                continue
+                            if not matched.get("pdf_downloaded"):
+                                normalized = PDF_DIR / f"{matched['id']}.pdf"
+                                try:
+                                    import shutil
+                                    if fp != normalized and fp.exists():
+                                        shutil.copy2(fp, normalized)
+                                except OSError:
+                                    pass
+                                matched["pdf_downloaded"] = True
+                                matched["pdf_local"] = str(normalized)
+                                found.append({"id": matched["id"], "title": matched.get("title", "")[:80], "file": fp.name})
+                    if found:
+                        save_db(db)
+                    self._json({"ok": True, "matched": found})
                 except Exception as e:
                     self._json({"ok": False, "error": str(e)}, 500)
                 return
