@@ -9,9 +9,9 @@ Academic paper manager — collect metadata, BibTeX, and PDFs from journal URLs.
 cd Litmanger
 
 # 2. 直接运行（纯 Python 标准库，不需要 pip install 任何东西）
-python -m litmanger --list                         # 列出所有论文
-python -m litmanger server                          # 启动仪表板 → http://127.0.0.1:8765
-python -m litmanger https://doi.org/10.1103/xxx     # 添加论文
+python -m litmanger list                               # 列出所有论文
+python -m litmanger server                             # 启动仪表板 → http://127.0.0.1:8765
+python -m litmanger https://doi.org/10.1103/xxx        # 添加论文
 ```
 
 > **为什么不需要安装？** Python 会自动搜索当前目录下的 `litmanger/` 包。所有核心功能（元数据抓取、BibTeX、HTML 仪表板、本地服务器）只用标准库，不依赖任何第三方库。
@@ -25,7 +25,7 @@ pip install -e .
 之后就可以从任意目录直接用：
 
 ```powershell
-litmanger --list
+litmanger list
 litmanger server
 litmanger https://doi.org/10.1103/xxx
 ```
@@ -84,13 +84,14 @@ Litmanger/
 | Command | Description |
 |---------|-------------|
 | `litmanger <url>` | Add paper from URL + attempt PDF download |
-| `litmanger --list` | List all papers |
-| `litmanger --download <id>` | Re-download PDF for a paper |
-| `litmanger --open <id>` | Open paper in browser |
-| `litmanger --mark-done <id>` | Mark PDF as downloaded |
-| `litmanger --html` | Generate static HTML dashboard |
+| `litmanger list` | List all papers |
+| `litmanger download <id>` | Re-download PDF for a paper |
+| `litmanger open <id>` | Open paper in browser |
+| `litmanger mark-done <id>` | Mark PDF as downloaded |
+| `litmanger html` | Generate static HTML dashboard |
 | `litmanger server` | Start local dashboard (http://127.0.0.1:8765) |
 | `litmanger server --port 9000` | Start on custom port |
+| `litmanger add <url> --no-download` | Add paper without downloading PDF |
 
 ## Browser Integration
 

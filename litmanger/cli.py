@@ -178,47 +178,86 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = argparse.ArgumentParser(
         prog="litmanger",
-        description="Academic paper manager — collect metadata and PDFs from journal URLs",
+        description="Academic paper manager — collect metadata and PDFs from journal URLs.\n"
+                    "Subcommands: list, server, add, download, open, mark-done, html\n"
+                    "Or just pass a URL directly: litmanger <url>",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   litmanger https://journals.aps.org/prb/abstract/10.1103/PhysRevB.113.235157
-  litmanger --list
+  litmanger list
   litmanger server
-  litmanger --download PhysRevB.113.235157
+  litmanger download PhysRevB.113.235157
 """,
     )
 
-    parser.add_argument("url", nargs="?", help="Journal URL or DOI to add")
-    parser.add_argument("--list", action="store_true", help="List all papers")
-    parser.add_argument("--download", metavar="ID", help="Download PDF for a paper by ID")
-    parser.add_argument("--open", metavar="ID", help="Open a paper's PDF/URL in the browser")
-    parser.add_argument("--mark-done", metavar="ID", help="Mark a paper's PDF as downloaded")
-    parser.add_argument("--html", action="store_true", help="Generate static HTML dashboard")
-    parser.add_argument("--server", dest="serve", action="store_true", help="Start local dashboard server")
-    parser.add_argument("--port", type=int, default=8765, help="Server port (default: 8765)")
-    parser.add_argument("--no-download", action="store_true", help="Skip PDF download when adding a paper")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose / debug output")
 
-    args = parser.parse_args(argv)
+    sub = parser.add_subparsers(dest="command", title="commands")
+    sub.required = False
 
-    # Dispatch
-    if args.list:
-        return cmd_list(args.verbose)
-    if args.download:
-        return cmd_download(args.download, args.verbose)
-    if args.open:
-        return cmd_open(args.open, args.verbose)
-    if args.mark_done:
-        return cmd_mark_done(args.mark_done, args.verbose)
-    if args.html:
-        return cmd_html(args.verbose)
-    if args.serve:
-        return cmd_server(args.port, args.verbose)
-    if args.url:
-        return cmd_add(args.url, no_download=args.no_download, verbose=args.verbose)
+    # litmanger add <url>
+    add_p = sub.add_parser("add", help="Add a paper from URL or DOI", aliases=["a"])
+    add_p.add_argument("url", help="Journal URL or DOI")
+    add_p.add_argument("--no-download", action="store_true", help="Skip PDF download")
 
-    # No args — show help
+    # litmanger list
+    sub.add_parser("list", help="List all papers", aliases=["ls", "l"])
+
+    # litmanger server
+    server_p = sub.add_parser("server", help="Start local dashboard server", aliases=["srv"])
+    server_p.add_argument("--port", "-p", type=int, default=8765, help="Port (default: 8765)")
+
+    # litmanger download <id>
+    dl_p = sub.add_parser("download", help="Download PDF for a paper", aliases=["dl", "d"])
+    dl_p.add_argument("id", metavar="ID", help="Paper ID")
+
+    # litmanger open <id>
+    open_p = sub.add_parser("open", help="Open paper in browser")
+    open_p.add_argument("id", metavar="ID", help="Paper ID")
+
+    # litmanger mark-done <id>
+    md_p = sub.add_parser("mark-done", help="Mark PDF as downloaded")
+    md_p.add_argument("id", metavar="ID", help="Paper ID")
+
+    # litmanger html
+    sub.add_parser("html", help="Generate static HTML dashboard")
+
+    # Parse
+    args, remaining = parser.parse_known_args(argv)
+
+    verbose = args.verbose
+
+    # ── Dispatch by subcommand ──
+    cmd = args.command
+
+    if cmd in ("add", "a"):
+        return cmd_add(args.url, no_download=args.no_download, verbose=verbose)
+
+    if cmd in ("list", "ls", "l"):
+        return cmd_list(verbose)
+
+    if cmd in ("server", "srv"):
+        return cmd_server(args.port, verbose)
+
+    if cmd in ("download", "dl", "d"):
+        return cmd_download(args.id, verbose)
+
+    if cmd == "open":
+        return cmd_open(args.id, verbose)
+
+    if cmd == "mark-done":
+        return cmd_mark_done(args.id, verbose)
+
+    if cmd == "html":
+        return cmd_html(verbose)
+
+    # ── No subcommand matched — treat first positional as URL ──
+    reserved = {"add", "a", "list", "ls", "l", "server", "srv", "download", "dl", "d", "open", "mark-done", "html", "help"}
+    for token in (remaining or argv or []):
+        if token and not token.startswith("-") and token not in reserved:
+            return cmd_add(token, verbose=verbose)
+
     parser.print_help()
     return 0
 
