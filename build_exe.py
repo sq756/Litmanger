@@ -42,14 +42,13 @@ def build():
     pdfs_dir = DIST / "Litmanger" / "pdfs"
     pdfs_dir.mkdir(exist_ok=True)
 
-    # Convenience launcher
+    # Convenience launcher (exe auto-opens browser on its own)
     launcher = DIST / "Litmanger" / "start.bat"
     launcher.write_text(
         '@echo off\r\n'
         'cd /d "%~dp0"\r\n'
         'if not exist "pdfs" mkdir "pdfs"\r\n'
-        'start "" "Litmanger.exe"\r\n'
-        'start http://127.0.0.1:8766\r\n',
+        'start "" /B "Litmanger.exe"\r\n',
         encoding="ascii",
     )
 

@@ -14,8 +14,7 @@ for %%c in (python python3 py) do (
 :: No Python - try standalone exe
 if exist "Litmanger.exe" (
     echo Starting Litmanger...
-    start "" "Litmanger.exe"
-    start http://127.0.0.1:8766
+    start "" /B "Litmanger.exe"
     goto :end
 )
 
