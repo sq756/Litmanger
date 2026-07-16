@@ -102,6 +102,17 @@ def extract_meta(html, name):
 
 
 def fetch_bibtex(doi):
+    """Fetch BibTeX from Crossref API, with dx.doi.org fallback."""
+    try:
+        api_url = f"https://api.crossref.org/works/{urllib.parse.quote(doi, safe='')}/transform/application/x-bibtex"
+        req = urllib.request.Request(api_url, headers=HEADERS)
+        ctx = make_ssl_context()
+        with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
+            data = resp.read().decode("utf-8", errors="replace")
+            if data.strip().startswith("@"):
+                return data
+    except Exception:
+        pass
     try:
         req = urllib.request.Request(
             f"https://dx.doi.org/{doi}",
@@ -109,7 +120,10 @@ def fetch_bibtex(doi):
         )
         ctx = make_ssl_context()
         with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
-            return resp.read().decode("utf-8", errors="replace")
+            data = resp.read().decode("utf-8", errors="replace")
+            if data.strip().startswith("<"):
+                return None
+            return data
     except Exception:
         return None
 
@@ -137,10 +151,27 @@ def collect_paper(url):
         url = "https://doi.org/" + url
 
     arxiv_id = extract_arxiv_id(url) if is_arxiv(url) else None
-    doi = extract_doi(url) if not arxiv_id else None
+    doi = extract_doi(url) if not arxiv_id else None  # URL-based DOI (arxiv URLs don't have DOI in URL)
 
     if not doi and not arxiv_id:
         return None, "Could not extract DOI or arXiv ID"
+
+    try:
+        html, final_url = fetch_url(url)
+    except Exception as e:
+        return None, f"Fetch failed: {e}"
+
+    # For arXiv pages, extract DOI from the HTML (arXiv doesn't use citation_doi meta tag)
+    # The DOI is in: <a href="https://doi.org/10.48550/arXiv.2603.28627" id="arxiv-doi-link">
+    if arxiv_id and not doi:
+        m = re.search(r'<a\s+[^>]*href="https?://doi\.org/(10\.\d{4,}/[^"]+)"[^>]*>', html, re.I)
+        if m:
+            doi = m.group(1).rstrip(".")
+        else:
+            # Fallback: search for any arXiv DOI pattern in the HTML
+            m = re.search(r'(10\.\d{4,}/arXiv\.[\d.]+)', html)
+            if m:
+                doi = m.group(1).rstrip(".")
 
     # Check if already in library
     db = load_db()
@@ -150,12 +181,10 @@ def collect_paper(url):
         if doi and p.get("doi") == doi:
             return p, None
 
-    try:
-        html, final_url = fetch_url(url)
-    except Exception as e:
-        return None, f"Fetch failed: {e}"
-
     title = extract_meta(html, "citation_title")
+    # Decode HTML entities (e.g. &#39; → ')
+    if title:
+        title = title.replace("&#39;", "'").replace("&amp;", "&").replace("&quot;", "\"").replace("&lt;", "<").replace("&gt;", ">")
     authors = re.findall(r'<meta\s+name="citation_author"\s+content="([^"]+)"', html)
     authors = [normalize_author_name(a) for a in authors]
     journal = extract_meta(html, "citation_journal_title")
