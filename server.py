@@ -10,7 +10,6 @@ import os
 import re
 import secrets
 import shutil
-import ssl
 import sys
 import threading
 import urllib.error
@@ -24,7 +23,6 @@ from litmanger.utils import (
     BROWSER_HEADERS,
     extract_doi_from_html,
     extract_meta_name,
-    extract_meta_names,
     make_ssl_context,
     normalize_author_name,
 )
@@ -202,7 +200,8 @@ def collect_paper(url):
     # arXiv: extract DOI from arxiv-doi-link in HTML
     if arxiv_id and not doi and html:
         m = re.search(r'<a\s+[^>]*href="https?://doi\.org/(10\.\d{4,}/[^"]+)"[^>]*>', html, re.I)
-        if m: doi = m.group(1).rstrip(".")
+        if m:
+            doi = m.group(1).rstrip(".")
 
     if not doi and not arxiv_id:
         return None, "Could not extract DOI or arXiv ID"
@@ -368,8 +367,7 @@ def sign_comment_data(data_str):
     ident = load_identity()
     pubkey_b64 = ident["pubkey"]
     try:
-        from cryptography.hazmat.primitives.asymmetric import ed25519
-        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import ed25519  # noqa: F401
 
         priv_bytes = base64.b64decode(ident["privkey"])
         priv = ed25519.Ed25519PrivateKey.from_private_bytes(priv_bytes)
@@ -1243,7 +1241,7 @@ def main():
     print(f"   PDFs: {resolve_pdf_dir()}")
     if used_port != PORT:
         print(f"   (Port {PORT} was in use, using {used_port} instead)")
-    print(f"   Press Ctrl+C to stop")
+    print("   Press Ctrl+C to stop")
     print("  ============================================")
     print("")
 
