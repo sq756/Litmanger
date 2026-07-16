@@ -242,6 +242,58 @@ def mark_downloaded(paper_id, local_path=None):
     return False
 
 
+def generate_html_page(db):
+    """Generate a static HTML page for offline browsing / sharing."""
+    papers = db["papers"]
+    rows = []
+    for p in papers:
+        title = p.get("title", "Unknown")
+        authors = ", ".join(p.get("authors", [])[:5])
+        if len(p.get("authors", [])) > 5:
+            authors += " et al."
+        journal = p.get("journal", "")
+        year = p.get("year", "")
+        doi = p.get("doi", "")
+        abstract = (p.get("abstract", "") or "")[:500]
+        tags = " ".join(
+            f'<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;background:#eef2ff;color:#4f46e5;margin:2px">{t}</span>'
+            for t in p.get("tags", [])
+        )
+        pdf_ok = "&#x2705;" if p.get("pdf_downloaded") else "&#x274C;"
+        rows.append(f"""<tr>
+        <td>{pdf_ok}</td>
+        <td><strong>{title}</strong><br><small>{authors}</small><br><small>{journal} ({year})</small></td>
+        <td>{tags}</td>
+        <td><small><a href="https://doi.org/{doi}" target="_blank">{doi}</a></small></td>
+        <td><small>{abstract}</small></td>
+        </tr>""")
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>LitManager Paper Library</title>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f0f1f5;color:#1a1a2e;padding:2rem}}
+h1{{margin-bottom:1rem;color:#4f46e5}}
+table{{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.1)}}
+th,td{{padding:0.75rem;text-align:left;border-bottom:1px solid #e2e4e9;font-size:0.85rem;line-height:1.5}}
+th{{background:#f5f5fa;font-weight:600;font-size:0.78rem;text-transform:uppercase;color:#666}}
+tr:hover{{background:#f5f5fa}}
+</style>
+</head>
+<body>
+<h1>LitManager Paper Library</h1>
+<p style="margin-bottom:1.5rem;color:#666;font-size:0.85rem">{len(papers)} papers &middot; Generated on {date.today().isoformat()}</p>
+<table>
+<thead><tr><th>PDF</th><th>Title / Authors / Journal</th><th>Tags</th><th>DOI</th><th>Abstract</th></tr></thead>
+<tbody>{"".join(rows)}</tbody>
+</table>
+</body>
+</html>"""
+
+
 class Handler(http.server.BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
@@ -618,6 +670,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     if pdf_fp.exists():
                         pdf_fp.unlink()
                     self._json({"ok": True})
+                except Exception as e:
+                    self._json({"ok": False, "error": str(e)}, 500)
+                return
+
+            # --- /api/generate-html ---
+            if parsed.path == "/api/generate-html":
+                try:
+                    db = load_db()
+                    html = generate_html_page(db)
+                    html_path = SCRIPT_DIR / "paper_library.html"
+                    with open(html_path, "w", encoding="utf-8") as f:
+                        f.write(html)
+                    self._json({"ok": True, "path": str(html_path.name)})
                 except Exception as e:
                     self._json({"ok": False, "error": str(e)}, 500)
                 return

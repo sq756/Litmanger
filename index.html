@@ -52,11 +52,12 @@ input:focus,textarea:focus{border-color:var(--a)}
 .batch-area textarea{width:100%;min-height:80px;padding:0.5rem;border-radius:var(--r);font-size:0.75rem;resize:vertical}
 .note-edit{width:100%;min-height:60px;padding:0.5rem;border-radius:var(--r);font-size:0.82rem;margin-top:0.5rem;resize:vertical}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
+.menu-item{padding:0.5rem 0.75rem;font-size:0.78rem;cursor:pointer;white-space:nowrap;transition:background 0.12s}.menu-item:hover{background:var(--h)}
 </style></head>
 <body>
 <div id="app">
 <div id="left">
-<div class="ph"><span>LitManager</span><span style="flex:1"></span><button class="btn btn-o btn-s" onclick="toggleDark()" title="Dark mode">&#x25D1;</button><button class="btn btn-o btn-s" onclick="toggleBatch()" title="Batch import">+B</button></div>
+<div class="ph"><span>LitManager</span><span style="flex:1"></span><div class="menu-wrap" style="position:relative"><button class="btn btn-o btn-s" onclick="toggleMenu(event)">Menu</button><div class="menu-drop" id="menuDrop" style="display:none;position:absolute;top:100%;right:0;background:var(--p);border:1px solid var(--b);border-radius:var(--r);z-index:100;min-width:180px;box-shadow:0 4px 12px rgba(0,0,0,0.1)"><div class="menu-item" onclick="exportAllBibtex();toggleMenu()">Export BibTeX</div><div class="menu-item" onclick="exportAllJson();toggleMenu()">Export JSON</div><div class="menu-item" onclick="downloadAllPdfs();toggleMenu()">Download All PDFs</div><div class="menu-item" onclick="generateHtml();toggleMenu()">Static HTML</div><div style="border-top:1px solid var(--b)"></div><div class="menu-item" onclick="if(confirm('Reload all papers from server?')){loadPapers();updateStats()};toggleMenu()">Refresh</div></div></div><button class="btn btn-o btn-s" onclick="toggleDark()" title="Dark mode">&#x25D1;</button><button class="btn btn-o btn-s" onclick="toggleBatch()" title="Batch import">+B</button></div>
 <div class="stats-bar" id="statsBar"></div>
 <div class="add-bar"><input type="text" id="addUrl" placeholder="Paste DOI or URL..." onkeydown="if(event.key==='Enter')addPaper(event)"><button class="btn btn-p btn-s" onclick="addPaper(event)">Add</button></div>
 <div id="batchPanel" style="display:none;padding:0 0.5rem 0.5rem"><div class="batch-area"><textarea id="batchInput" placeholder="Paste multiple DOIs/URLs, one per line..."></textarea><button class="btn btn-p btn-s" onclick="batchImport()">Import All</button></div></div>
@@ -227,6 +228,10 @@ function exportAllBibtex(){var all=PAPERS.filter(function(p){return p.bibtex}).m
 function exportAllJson(){var j=JSON.stringify({papers:PAPERS},null,2);var b=new Blob([j],{type:'application/json'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='papers.json';a.click();URL.revokeObjectURL(u);toast('Exported papers.json')}
 
 function downloadAllPdfs(){var missing=PAPERS.filter(function(p){return!p.pdf_downloaded&&p.pdf_url});if(!missing.length){toast('All PDFs downloaded');return}toast('Downloading '+missing.length+' PDFs...');missing.forEach(function(p,i){setTimeout(function(){var a=document.createElement('a');a.href='/api/proxy-download?url='+encodeURIComponent(p.pdf_url)+'&id='+p.id;a.click();if(i===missing.length-1){setTimeout(function(){loadPapers();updateStats()},3000)}},i*1000)})}
+
+function toggleMenu(e){if(e)e.stopPropagation();var d=document.getElementById('menuDrop');d.style.display=d.style.display==='none'?'block':'none'}
+function generateHtml(){fetch('/api/generate-html',{method:'POST'}).then(function(r){return r.json()}).then(function(d){if(d.ok)toast('HTML saved: '+d.path);else toast('Error: '+d.error)}).catch(function(e){toast('Failed: '+e.message)})}
+document.addEventListener('click',function(e){var d=document.getElementById('menuDrop');var b=e.target;if(d&&d.style.display==='block'&&!b.closest('.menu-wrap'))d.style.display='none'})
 
 function renderChat(){
   var c=document.getElementById('chatMessages');if(!chatMsgs.length){c.innerHTML='<div class="ec">'+(cfg.api_key?'Ask anything about papers':'Configure API in Settings')+'</div>';return}

@@ -22,3 +22,6 @@ dist/
 build/
 *.spec
 *.exe
+
+# Generated files
+paper_library.html
