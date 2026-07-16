@@ -624,5 +624,7 @@ toggleDark=function(){_origToggleDark();applyTheme()};
 })();
 document.addEventListener('keydown',function(e){if(e.key==='/'&&document.activeElement===document.body){e.preventDefault();document.getElementById('searchBox').focus()}});
 loadPapers();loadConfig();renderChat();updateStats();
+// Save server origin for bookmarklet/Tampermonkey
+localStorage.setItem('litmanager_server',window.location.origin);
 </script>
 </body></html>

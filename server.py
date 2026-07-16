@@ -400,6 +400,90 @@ class Handler(http.server.BaseHTTPRequestHandler):
         cl = int(self.headers.get("Content-Length", 0))
         return self.rfile.read(cl) if cl > 0 else b""
 
+    # ── Bookmarklet / Install helpers ──────────────
+
+    def _server_url(self):
+        """Return the full origin for this server (http://127.0.0.1:<port>)."""
+        host = self.headers.get("Host", f"127.0.0.1:{PORT}")
+        scheme = "http"
+        return f"{scheme}://{host}"
+
+    def _serve_bookmarklet(self):
+        server_url = self._server_url()
+        bm_js = rf"""(function(){{
+  var SERVER='{server_url}';
+  var url=location.href,doi='',pdfUrl='';
+  var m=url.match(/\/(10\.\d{{4,}}\/[^\/?#]+)/);
+  if(m)doi=m[1];
+  else{{var metaDoi=document.querySelector('meta[name="citation_doi"]');if(metaDoi)doi=metaDoi.content}}
+  var paperId=doi?doi.split('/').pop():'unknown';
+  if(url.indexOf('/pdf/')>=0||url.endsWith('.pdf'))pdfUrl=url;
+  if(!pdfUrl){{var metaPdf=document.querySelector('meta[name="citation_pdf_url"]');if(metaPdf&&metaPdf.content)pdfUrl=metaPdf.content}}
+  if(!pdfUrl){{var links=document.querySelectorAll('a[href*="pdf"]');for(var i=0;i<links.length;i++){{var href=links[i].href||links[i].getAttribute('href')||'';if(href.includes('/pdf/')&&href.includes('10.')){{pdfUrl=href.startsWith('http')?href:new URL(href,location.origin).href;break}}}}}}
+  if(!pdfUrl&&url.includes('arxiv.org/abs/'))pdfUrl=url.replace('/abs/','/pdf/')+'.pdf';
+  if(!pdfUrl){{alert('Litmanger: No PDF URL found on this page.');return}}
+  var note=document.createElement('div');note.style.cssText='position:fixed;top:12px;right:12px;z-index:2147483647;background:#0f3460;color:#fff;padding:10px 20px;border-radius:8px;font:14px -apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.25);transition:opacity .4s';note.textContent='Saving PDF...';document.body.appendChild(note);
+  fetch(pdfUrl,{{credentials:'include'}}).then(function(r){{if(!r.ok)throw new Error('HTTP '+r.status);return r.blob()}}).then(function(blob){{var fd=new FormData();fd.append('pdf',blob,paperId+'.pdf');return fetch(SERVER+'/api/save-pdf?id='+paperId,{{method:'POST',body:fd}})}}).then(function(r){{return r.json()}}).then(function(j){{if(j.ok){{note.style.background='#4caf50';note.textContent='✓ Saved: '+j.filename+' ('+(j.size/1024).toFixed(0)+' KB)'}}else{{note.style.background='#f44336';note.textContent='✗ Error: '+(j.error||'unknown')}}}}).catch(function(e){{note.style.background='#f44336';note.textContent='✗ Error. Is Litmanger running?'}}).then(function(){{setTimeout(function(){{note.style.opacity='0';setTimeout(function(){{note.remove()}},500)}},3500)}});
+}})();"""
+        body = bm_js.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/javascript; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _serve_install_page(self):
+        server_url = self._server_url()
+        html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Litmanger — Setup</title>
+<style>
+*,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f5f7;color:#1d1d1f;line-height:1.7;padding:2rem;max-width:780px;margin:0 auto}}
+.card{{background:white;border-radius:12px;padding:1.5rem 2rem;margin:1.25rem 0;box-shadow:0 1px 3px rgba(0,0,0,.06)}}
+h1{{font-size:1.8rem;margin-bottom:1rem;color:#0f3460}}
+h2{{font-size:1.2rem;margin:1.5rem 0 .8rem;color:#333;border-bottom:2px solid #0f3460;padding-bottom:.3rem;display:inline-block}}
+.bml{{display:inline-block;background:linear-gradient(135deg,#0f3460,#1a4a7a);color:#fff;padding:14px 36px;border-radius:30px;font-size:17px;font-weight:700;text-decoration:none;cursor:grab;margin:1rem 0;box-shadow:0 4px 15px rgba(15,52,96,.4);user-select:none}}
+.bml:active{{cursor:grabbing}}
+code{{background:#f0f0f5;padding:.15rem .4rem;border-radius:4px;font-size:.88em}}
+.cmd{{background:#2d2d2d;color:#e0e0e0;padding:.7rem 1.2rem;border-radius:8px;font-family:"SF Mono","Consolas",monospace;font-size:.82rem;margin:.5rem 0;line-height:1.6}}
+.note{{background:#fff8e1;border-left:4px solid #ffc107;padding:1rem;border-radius:0 8px 8px 0;margin:1rem 0}}
+@media(prefers-color-scheme:dark){{body{{background:#1c1c1e;color:#e5e5ea}}h2{{color:#ccc}}code{{background:#3a3a3c;color:#e5e5ea}}.card{{background:#2c2c2e}}}}
+</style>
+</head>
+<body>
+<h1>Litmanger Setup</h1>
+<div class="note"><strong>How it works:</strong> Browse a journal page → click bookmarklet → PDF is saved directly to <code>pdfs/</code> folder using your browser's login cookies.</div>
+
+<h2>Step 1: Server running?</h2>
+<div class="card">
+<p>Server URL: <code id="svr">{server_url}</code> <span id="status" style="margin-left:.5rem">checking...</span></p>
+<p style="margin-top:.5rem;font-size:.88rem;color:#666">If you don't see the dashboard, run <code>python server.py</code> first.</p>
+</div>
+
+<h2>Step 2: Install bookmarklet</h2>
+<div class="card">
+<p>Drag this button to your bookmarks bar:</p>
+<a class="bml" href="javascript:(function(){{var s=document.createElement('script');s.src='{server_url}/bm.js';document.body.appendChild(s)}})()">Save PDF to Litmanger</a>
+<p style="margin-top:.5rem;color:#888;font-size:.88rem">Bookmark bar hidden? Press <code>Ctrl+Shift+B</code> (Chrome/Edge).</p>
+<p style="margin-top:.5rem"><strong>Usage:</strong> On any journal page, click "Save PDF to Litmanger" in your bookmarks → done.</p>
+</div>
+
+<script>
+var url='{server_url}';
+fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{document.getElementById('status').innerHTML='<span style="color:#4caf50;font-weight:600">✓ Running — '+p.length+' papers</span>'}}).catch(function(){{document.getElementById('status').innerHTML='<span style="color:#f44336;font-weight:600">✗ Not running</span>'}});
+</script>
+</body>
+</html>"""
+        body = html.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self):
         try:
             p = urllib.parse.urlparse(self.path)
@@ -496,6 +580,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 doi = qs.get("doi", [None])[0]
                 comments = load_comments()
                 self._json(comments.get(doi, []))
+                return
+
+            # /install — bookmarklet setup page
+            if p.path == "/install":
+                self._serve_install_page()
+                return
+
+            # /bm.js — dynamic bookmarklet with current server origin
+            if p.path == "/bm.js":
+                self._serve_bookmarklet()
                 return
 
             # Serve index.html for everything else
