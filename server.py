@@ -1214,31 +1214,36 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
 def main():
     import webbrowser
 
-    # Try ports in order, in case the default is already in use
-    ports = [PORT, 8767, 8768, 8769, 8770]
-    server = None
-    used_port = None
-
-    for p in ports:
-        try:
-            server = http.server.ThreadingHTTPServer(("127.0.0.1", p), Handler)
-            server.allow_reuse_address = True
-            used_port = p
-            break
-        except OSError:
-            continue
-
-    if server is None:
-        print("ERROR: Could not bind to any port. Tried:", ", ".join(str(p) for p in ports))
-        input("Press Enter to exit...")
+    # Always use port 8766 for a predictable, bookmarkable URL
+    try:
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+        server.allow_reuse_address = True
+    except OSError:
+        print("")
+        print(f"  ERROR: Port {PORT} is in use. Close the other Litmanger window first.")
+        print("")
+        input("  Press Enter to exit...")
         return
 
-    url = f"http://127.0.0.1:{used_port}"
+    url = "http://localhost:8766"
     print("")
     print("  ============================================")
     print(f"   LitManager  |  {url}")
-    print(f"   PDFs: {resolve_pdf_dir()}")
-    if used_port != PORT:
+    print("  ============================================")
+    print("")
+    print("  Bookmark: http://localhost:8766")
+    print("")
+
+    # Auto-open browser
+    try:
+        webbrowser.open(url)
+    except Exception:
+        pass
+
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nServer stopped.")
         print(f"   (Port {PORT} was in use, using {used_port} instead)")
     print("   Press Ctrl+C to stop")
     print("  ============================================")
