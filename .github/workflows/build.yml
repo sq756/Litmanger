@@ -38,11 +38,7 @@ jobs:
         shell: bash
         run: |
           cd dist/Litmanger
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            zip -r ../../litmanger-${{ matrix.name }}.zip ./*
-          else
-            zip -r ../../litmanger-${{ matrix.name }}.zip ./*
-          fi
+          zip -r ../../litmanger-${{ matrix.name }}.zip ./*
           cd ../..
           ls -lh litmanger-${{ matrix.name }}.zip
 
@@ -52,34 +48,8 @@ jobs:
           name: litmanger-${{ matrix.name }}
           path: litmanger-${{ matrix.name }}.zip
 
-  release:
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: pkgs
-
-      - name: Create Release
+      - name: Upload to release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          name: Litmanger ${{ github.ref_name }}
-          body: |
-            ## Litmanger ${{ github.ref_name }}
-
-            Standalone executables — no Python required. Just download and run.
-
-            | Platform | Download |
-            |----------|----------|
-            | Windows | `litmanger-windows.zip` — unzip, double-click `start.bat` |
-            | macOS | `litmanger-macos.zip` — unzip, run `./start.sh` |
-            | Linux | `litmanger-linux.zip` — unzip, run `./start.sh` |
-
-            Opens http://127.0.0.1:8766 automatically.
-          files: |
-            pkgs/litmanger-windows/litmanger-windows.zip
-            pkgs/litmanger-macos/litmanger-macos.zip
-            pkgs/litmanger-linux/litmanger-linux.zip
-          draft: false
-          prerelease: false
+          files: litmanger-${{ matrix.name }}.zip
