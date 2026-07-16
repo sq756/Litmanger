@@ -196,11 +196,12 @@ function toast(msg){
 
 // ── Splash screen ──
 var _folderConfigured=false;
-function showSplashError(msg){var e=document.getElementById('splashError');e.style.display='block';e.textContent=msg}
-function showSplashLoading(){var t=document.getElementById("splashText");if(t)t.textContent="Loading...";var b=document.getElementById("splashBtn");if(b){b.disabled=true;b.style.opacity="0.6";b.style.cursor="default"}}
+function showSplashError(msg){var e=document.getElementById('splashError');if(e){e.style.display='block';e.textContent=msg}}
+function showSplashLoading(){var t=document.getElementById('splashText');if(t)t.textContent='Loading...';var b=document.getElementById('splashBtn');if(b){b.disabled=true;b.style.opacity='0.6';b.style.cursor='default'}}
 function showSplashReady(){var t=document.getElementById('splashText');if(t)t.textContent='Click to open library'}
-var _entering=false;async function enterApp(){if(_entering)return;_entering=true;
-  console.log('enterApp called');
+var _entering=false;
+async function enterApp(){
+  if(_entering)return;_entering=true;
   showSplashLoading();
   for(var attempt=0;attempt<12;attempt++){
     try{var r=await fetch('/api/get-folder');var d=await r.json();_folderConfigured=!d.is_default;if(_folderConfigured)localStorage.setItem('litmanger_folder',d.path);break}catch(e){if(attempt<11)await new Promise(function(r){setTimeout(r,500)})}
@@ -208,8 +209,8 @@ var _entering=false;async function enterApp(){if(_entering)return;_entering=true
   for(var attempt2=0;attempt2<12;attempt2++){
     try{await loadPapers();await loadConfig();updateStats();renderChat();break}catch(e){if(attempt2<11)await new Promise(function(r){setTimeout(r,500)})}
   }
-  // server is up, transition to app
   var splash=document.getElementById('splash');var app=document.getElementById('app');
+  if(!splash||!app)return;
   app.style.display='flex';app.style.opacity='0';app.style.transition='opacity 0.5s ease';
   splash.style.opacity='0';splash.style.visibility='hidden';splash.style.transition='opacity 0.4s ease,visibility 0.4s ease';
   setTimeout(function(){app.style.opacity='1'},100);
@@ -701,7 +702,7 @@ function applyBgOverlay(){
   if(op&&v)v.textContent=op.value+'%';if(bl&&b)b.textContent=bl.value+'px';
   var o=(parseInt((op&&op.value)||100)/100).toFixed(2);var blur=parseInt((bl&&bl.value)||0);
   if(o<1||blur>0){overlay.style.display='block';overlay.style.background='rgba(255,255,255,'+(1-o)+')';overlay.style.backdropFilter='blur('+blur+'px)'}else{overlay.style.display='none'}
-  if(bgUrl&&bgUrl.value&&bgUrl.value.trim()){var url=bgUrl.value.trim();if(/\.(mp4|webm|ogg)$/i.test(url))setBgVideo(url);else setBgImage(url)}else clearBg()}
+  if(bgUrl&&bgUrl.value&&bgUrl.value.trim()){var url=bgUrl.value.trim();if(/\.(mp4|webm|ogg)$/i.test(url))setBgVideo(url);else setBgImage(url)}else clearBg()}}
   catch(e){}
 }
 function setBgImage(url){clearBgVideo();document.body.style.backgroundImage='url('+url+')';document.body.style.backgroundSize='cover';document.body.style.backgroundPosition='center';document.body.style.backgroundAttachment='fixed'}
