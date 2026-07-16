@@ -1,7 +1,6 @@
 @echo off
 cd /d "%~dp0"
 
-:: Try to find Python — check common commands in order
 set "PYTHON="
 for %%c in (python python3 py) do (
     where %%c >nul 2>nul
@@ -19,10 +18,9 @@ echo.
 goto :end
 
 :found
-echo Litmanger — starting...
+echo Litmanger -- starting...
 echo.
 
-:: Try package-based server first (litmanger v2), fallback to standalone
 %PYTHON% -m litmanger server 2>nul && goto :end
 %PYTHON% server.py 2>nul && goto :end
 
