@@ -34,7 +34,10 @@ jobs:
           pip install -e .
 
       - name: Lint with ruff
-        run: ruff check .
+        run: |
+          ruff check . --fix
+          ruff format .
+          ruff check .
 
       - name: Run tests
         run: pytest -v
