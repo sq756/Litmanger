@@ -30,8 +30,8 @@ def clean():
 
 def build():
     cmd = [sys.executable, "-m", "PyInstaller", "--onefile", "--name", "Litmanger", "--clean"]
+    # --noconsole disabled for testing — shows terminal so you can see server startup + errors
     if IS_WIN:
-        cmd.append("--noconsole")
         cmd += ["--add-data", "index.html;."]
     else:
         cmd += ["--add-data", "index.html:."]
