@@ -34,13 +34,21 @@ jobs:
       - name: Build standalone
         run: python build_exe.py
 
-      - name: Package (zip)
-        shell: bash
+      - name: Package (zip via Python, cross-platform)
         run: |
-          cd dist/Litmanger
-          zip -r ../../litmanger-${{ matrix.name }}.zip ./*
-          cd ../..
-          ls -lh litmanger-${{ matrix.name }}.zip
+          python -c "
+          import zipfile, os, sys
+          from pathlib import Path
+          src = Path('dist/Litmanger')
+          out = Path('litmanger-${{ matrix.name }}.zip')
+          with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as zf:
+              for root, dirs, files in os.walk(src):
+                  for f in files:
+                      fp = Path(root) / f
+                      zf.write(fp, fp.relative_to(src))
+          size_mb = out.stat().st_size / 1048576
+          print(f'{out} ({size_mb:.1f} MB)')
+          "
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
