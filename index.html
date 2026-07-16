@@ -622,20 +622,38 @@ document.getElementById('tBlur').addEventListener('input',function(){saveBgSetti
 var _origToggleDark=toggleDark;
 toggleDark=function(){_origToggleDark();applyTheme()};
 
-	// === Init — wait for DOM + external scripts (KaTeX CDN) ===
-	document.addEventListener('DOMContentLoaded', function() {
-	  applyTheme();
-	  renderThemePresets();
-	  loadBgSettings();
-	  if(localStorage.getItem('litmanager_dark')==='1')document.body.classList.add('dark');
-	  loadPapers();
-	  loadConfig();
-	  renderChat();
-	  updateStats();
-	  localStorage.setItem('litmanager_server',window.location.origin);
-	  // Show page once DOM + theme + data are ready (prevents flash of blank content)
+	// === Init — DOMContentLoaded or direct call ===
+	function initApp() {
+	  try {
+	    applyTheme();
+	    renderThemePresets();
+	    loadBgSettings();
+	    if(localStorage.getItem('litmanager_dark')==='1')document.body.classList.add('dark');
+	    loadPapers();
+	    loadConfig();
+	    renderChat();
+	    updateStats();
+	    localStorage.setItem('litmanager_server',window.location.origin);
+	  } catch(e) {
+	    // If anything fails, at least show the page
+	    console.error('Litmanger init error:', e);
+	  }
 	  document.documentElement.style.visibility='visible';
-	});
+	}
+
+	if (document.readyState === 'loading') {
+	  document.addEventListener('DOMContentLoaded', initApp);
+	} else {
+	  // DOM already loaded (script ran late)
+	  initApp();
+	}
+
+	// Safety net: force visible after 5s no matter what
+	setTimeout(function() {
+	  if (document.documentElement.style.visibility === 'hidden') {
+	    document.documentElement.style.visibility = 'visible';
+	  }
+	}, 5000);
 
 // === Drag handles ===
 (function(){
