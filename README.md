@@ -15,63 +15,47 @@ Traditional reference managers (Zotero, Mendeley, EndNote) force you into folder
 
 ### Quick Start
 
-**Zero-install (Python stdlib only):**
+**Double-click `run.bat` (Windows)** or run:
 
 ```bash
-cd Litmanger
-python -m litmanger server                    # Dashboard → http://127.0.0.1:8765
-python -m litmanger list                      # List all papers
-python -m litmanger https://doi.org/10.1103/PhysRevB.113.235157  # Add a paper
+python server.py                                # Dashboard → http://127.0.0.1:8766
 ```
 
-No `pip install` needed — core functionality uses only the Python standard library.
+No `pip install` needed — uses only the Python standard library.
 
-**Optional: global install (run from any directory):**
+**Alternative: litmanger package (full CLI):**
 
 ```bash
 pip install -e .
-litmanger server
-litmanger list
-litmanger <url>
+litmanger server                                # Dashboard → http://127.0.0.1:8765
+litmanger list                                  # List all papers
+litmanger https://doi.org/10.1103/PhysRevB.113.235157  # Add a paper
 ```
 
-**Optional: enhanced PDF download (institutional access via browser cookies):**
-
-```bash
-pip install requests browser-cookie3
-```
-
-After installing, `litmanger <url>` automatically reads your Chrome/Edge/Firefox login cookies to download PDFs behind paywalls.
-
-**Windows quick launch:**
-
-```cmd
-run                        # Interactive menu
-run server                 # Start dashboard
-run <url>                  # Add paper
-```
+The standalone `server.py` (port 8766) is the main UI with all features: three-panel layout, AI chat, PDF preview, sort, themes, Markdown notes, and comments. The litmanger package (port 8765) adds CLI tools, bookmarklet support, and PDF download with browser cookies.
 
 ### Features
 
 | Feature | Description |
 |---------|-------------|
 | **Flat tags** | Every paper has tags — no folder hierarchy. Cross-category by design. |
-| **AI chat** | Bring your own API key (DeepSeek, OpenAI, or any compatible provider). Discuss papers in natural language. |
-| **Multi-publisher** | APS, arXiv, Nature, plus generic `citation_*` meta-tag fallback. Extensible via `@register()`. |
-| **Auto BibTeX** | Crossref API with publisher-specific fallback (APS, etc.). |
-| **PDF download** | Three strategies: browser cookies → server proxy → manual save. |
-| **PDF auto-rename** | Downloaded PDFs renamed to `Author_Year_Title.pdf`. |
+| **AI chat** | Bring your own API key (DeepSeek, OpenAI, or any compatible provider). |
+| **Auto metadata** | Paste a DOI, arXiv, or journal URL — auto-extracts title, authors, journal, year, abstract, BibTeX. |
+| **PDF preview** | Split-view PDF reader in the center panel. |
+| **PDF download** | Open Online → save to Downloads or pdfs/ → Mark Done → preview works. |
+| **PDF auto-scan** | Auto-Scan PDFs finds downloaded PDFs in Downloads/ and pdfs/, matches by paper ID. |
+| **P2P comments** | DOI-based comments with Ed25519 signing + optional relay server for sharing. |
+| **Markdown notes** | Per-paper Markdown editor with live preview and KaTeX math ($\LaTeX$). |
 | **Tag management** | Add/remove tags inline. |
-| **Paper notes** | Per-paper editable notes, included in AI context. |
+| **Sort & filter** | 8 sort modes (date, year, title, author, journal) + keyword filter. |
+| **Theme system** | 6 color presets, custom accent, background images/videos, opacity, blur. |
+| **Dark mode** | Toggle with persistence. |
+| **Resizable panels** | Drag handles between all three panels. |
 | **Batch import** | Paste multiple DOIs at once. |
-| **Dark mode** | Toggle with persistence (localStorage). |
-| **Resizable panels** | Drag to resize left/right panels. |
-| **Export** | Single paper JSON, full library BibTeX, or full library JSON. |
-| **Browser integration** | Bookmarklet + Tampermonkey userscript for one-click PDF save from journal pages. |
-| **PDF auto-archiver** | PowerShell script watches Downloads folder, copies new PDFs to `pdfs/`. |
-| **Static HTML** | Export your entire library to a portable `paper_library.html`. |
-| **Keyboard shortcuts** | `/` to focus search. |
-| **Portable** | Copy `papers.json` + `pdfs/` to migrate. Merge two libraries with JSON dedup. |
+| **Export** | Single paper JSON, full library BibTeX, full library JSON, static HTML. |
+| **Browser integration** | Bookmarklet + Tampermonkey (requires litmanger package, port 8765). |
+| **Keyboard shortcuts** | `/` to focus filter. |
+| **Portable** | Copy `papers.json` + `pdfs/` to migrate. Standalone `.exe` available. |
 
 ### Architecture
 
@@ -103,23 +87,35 @@ Litmanger/
 
 ### CLI Reference
 
+**Standalone server** (`python server.py`, port 8766) — the main UI:
+
+| Command | Description |
+|---------|-------------|
+| `python server.py` | Start dashboard at `http://127.0.0.1:8766` (auto-opens browser) |
+
+All features work through the web UI: add papers, sort, filter, download PDFs, AI chat, Markdown notes, comments, themes, export.
+
+**litmanger package CLI** (requires `pip install -e .`, port 8765):
+
 | Command | Description |
 |---------|-------------|
 | `litmanger <url>` | Add paper from URL + attempt PDF download |
-| `litmanger add <url>` | Add paper (with `--no-download` flag to skip PDF) |
-| `litmanger list` | List all papers with metadata |
-| `litmanger download <id>` | Re-download PDF for a paper |
+| `litmanger add <url>` | Add paper (with `--no-download` to skip PDF) |
+| `litmanger list` | List all papers |
+| `litmanger download <id>` | Re-download PDF |
 | `litmanger open <id>` | Open paper in browser |
 | `litmanger mark-done <id>` | Mark PDF as downloaded |
-| `litmanger html` | Generate static HTML dashboard (`paper_library.html`) |
-| `litmanger server` | Start local dashboard at `http://127.0.0.1:8765` |
-| `litmanger server --port 9000` | Start on custom port |
+| `litmanger html` | Generate static `paper_library.html` |
+| `litmanger server` | Dashboard at `http://127.0.0.1:8765` |
 
 ### Browser Integration
 
-**Bookmarklet:** Visit `http://127.0.0.1:8765/install`, drag the **Save PDF** button to your bookmarks bar. Click it on any journal page to save the PDF directly to your library.
+> **Requires the litmanger package** (`pip install -e .` + `litmanger server` on port 8765).  
+> The standalone `python server.py` (port 8766) does not have bookmarklet routes.
 
-**Tampermonkey Userscript:** Install [Tampermonkey](https://www.tampermonkey.net/), then open `http://127.0.0.1:8765/save-paper.user.js`. Floating buttons appear automatically on APS, arXiv, Nature, and other journal sites.
+**Bookmarklet:** Visit `http://127.0.0.1:8765/install`, drag the **Save PDF** button to your bookmarks bar. Click on any journal page to save the PDF directly to `pdfs/`.
+
+**Tampermonkey Userscript:** Install [Tampermonkey](https://www.tampermonkey.net/), then open `http://127.0.0.1:8765/save-paper.user.js`. Floating buttons appear on APS, arXiv, Nature, and other journal sites.
 
 ### Paper Data Schema
 
@@ -172,40 +168,29 @@ MIT
 
 ### 快速开始
 
-**零安装（纯 Python 标准库）：**
+**双击 `run.bat`（Windows）** 或运行：
 
 ```bash
-cd Litmanger
-python -m litmanger server                     # 启动仪表板 → http://127.0.0.1:8765
-python -m litmanger list                       # 列出所有论文
-python -m litmanger https://doi.org/10.1103/PhysRevB.113.235157  # 添加论文
+python server.py                                # 仪表板 → http://127.0.0.1:8766
 ```
 
-不需要 `pip install` —— 核心功能只用 Python 标准库。
+不需要 `pip install` —— 只用 Python 标准库。
 
-**可选：全局安装（在任意目录下运行）：**
+**可选：litmanger 包（完整 CLI）：**
 
 ```bash
 pip install -e .
-litmanger server
-litmanger list
-litmanger <url>
+litmanger server                                # 仪表板 → http://127.0.0.1:8765
+litmanger list                                  # 列出所有论文
+litmanger https://doi.org/10.1103/PhysRevB.113.235157  # 添加论文
 ```
 
-**可选：增强 PDF 下载（通过浏览器 cookie 过机构认证）：**
-
-```bash
-pip install requests browser-cookie3
-```
-
-安装后，`litmanger <url>` 会读取你 Chrome/Edge/Firefox 的登录 cookie，自动下载付费墙后的 PDF。
+独立版 `server.py`（端口 8766）是主入口，包含所有功能：三栏布局、AI 对话、PDF 预览、排序、主题、Markdown 笔记和评论。litmanger 包（端口 8765）额外提供 CLI 工具、bookmarklet 支持和浏览器 cookie PDF 下载。
 
 **Windows 快捷启动：**
 
 ```cmd
-run                        # 交互式菜单
-run server                 # 启动仪表板
-run <url>                  # 添加论文
+双击 run.bat                # 自动检测 Python，启动 server.py → 浏览器打开
 ```
 
 ### 功能
@@ -213,43 +198,50 @@ run <url>                  # 添加论文
 | 功能 | 说明 |
 |------|------|
 | **扁平标签** | 每篇论文打标签，不建文件夹。天然支持跨分类。 |
-| **AI 对话** | 自带 API key（支持 DeepSeek、OpenAI 等兼容接口）。用自然语言讨论论文。 |
-| **多出版商** | 支持 APS、arXiv、Nature，以及通用 `citation_*` 元标签。可通过 `@register()` 扩展。 |
-| **自动 BibTeX** | Crossref API 获取，含 APS 等特定出版商回退。 |
-| **PDF 下载** | 三阶段回退：浏览器 cookie → 服务端代理 → 手动保存。 |
-| **PDF 自动重命名** | 下载后自动重命名为 `作者_年份_标题.pdf`。 |
+| **AI 对话** | 自带 API key（支持 DeepSeek、OpenAI 等兼容接口）。 |
+| **自动元数据** | 粘贴 DOI、arXiv 或期刊链接，自动提取标题、作者、期刊、年份、摘要、BibTeX。 |
+| **PDF 预览** | 中间栏分屏 PDF 阅读器。 |
+| **PDF 下载** | Open Online → 保存到 Downloads 或 pdfs/ → Mark Done → 预览即可用。 |
+| **PDF 自动扫描** | Auto-Scan PDFs 自动匹配 Downloads/ 和 pdfs/ 中的 PDF，按论文 ID 关联。 |
+| **P2P 评论** | 基于 DOI 的评论系统，Ed25519 签名 + 可选中继服务器共享。 |
+| **Markdown 笔记** | 每篇论文的 Markdown 编辑器，带实时预览和 KaTeX 数学公式渲染。 |
 | **标签管理** | 行内增删标签。 |
-| **论文笔记** | 每篇论文可编辑笔记，AI 对话时自动注入上下文。 |
+| **排序与过滤** | 8 种排序模式（日期、年份、标题、作者、期刊）+ 关键字过滤。 |
+| **主题系统** | 6 套预设配色、自定义强调色、背景图片/视频、透明度、模糊。 |
+| **深色模式** | 一键切换，自动记忆。 |
+| **可拖拽面板** | 三个面板之间可拖拽调整宽度。 |
 | **批量导入** | 一次粘贴多个 DOI。 |
-| **深色模式** | 一键切换，自动记忆（localStorage）。 |
-| **可拖拽面板** | 左右面板拖拽调整宽度。 |
-| **导出** | 单篇 JSON、全文库 BibTeX、全文库 JSON。 |
-| **浏览器集成** | Bookmarklet + Tampermonkey 脚本，期刊页面一键保存 PDF。 |
-| **PDF 自动归档** | PowerShell 脚本监控 Downloads 文件夹，自动复制新 PDF 到 `pdfs/`。 |
-| **静态 HTML** | 导出整个论文库为便携 `paper_library.html`。 |
-| **键盘快捷键** | `/` 聚焦搜索框。 |
-| **极致便携** | 拷贝 `papers.json` + `pdfs/` 即迁移。两个库合并只需 JSON 去重。 |
+| **导出** | 单篇 JSON、全文库 BibTeX、全文库 JSON、静态 HTML。 |
+| **浏览器集成** | Bookmarklet + Tampermonkey（需要 litmanger 包，端口 8765）。 |
+| **键盘快捷键** | `/` 聚焦过滤框。 |
+| **极致便携** | 拷贝 `papers.json` + `pdfs/` 即迁移。提供独立 `.exe` 免 Python 运行。 |
 
 ### 项目结构
 
 ```
 Litmanger/
-├── litmanger/              # Python 包
-│   ├── __init__.py         # 包元数据 (v2.0.0)
-│   ├── __main__.py         # python -m litmanger 入口
-│   ├── cli.py              # CLI：add, list, server, download, open, html
+├── server.py               # 独立服务器（端口 8766，零依赖主入口）
+├── index.html              # 单文件 SPA（三栏布局，全部功能）
+├── relay_server.py         # Ed25519 签名评论中继服务器（端口 9987）
+├── build_exe.py            # PyInstaller 构建脚本 → dist/Litmanger.exe
+├── litmanger/              # Python 包（v2.0.0，备选入口）
+│   ├── cli.py              # 完整 CLI：add, list, server, download, open, html
 │   ├── models.py           # Paper & PaperDB 数据类
-│   ├── fetcher.py          # 多出版商元数据提取
+│   ├── fetcher.py          # 多出版商元数据提取（APS, arXiv, Nature）
 │   ├── pdf.py              # PDF 下载器（浏览器 cookie）
-│   ├── server.py           # 本地 HTTP 仪表板（仅 127.0.0.1）
+│   ├── server.py           # 包 HTTP 仪表板（端口 8765）
 │   ├── templates.py        # HTML 仪表板生成
-│   └── utils.py            # DOI 解析、HTTP、路径安全
-├── static/                 # 浏览器集成
-│   ├── bookmarklet.js      # 拖到书签栏的"保存 PDF"按钮
-│   └── save-paper.user.js  # Tampermonkey 脚本（自动注入按钮）
-├── server.py               # 独立服务器（v1 回退，无需包依赖）
-├── index.html              # 独立 SPA（v1 回退）
+│   └── utils.py            # DOI 解析、HTTP 帮助函数
+├── static/                 # 浏览器集成（仅 litmanger 包）
+│   ├── bookmarklet.js      # "保存 PDF"书签
+│   └── save-paper.user.js  # Tampermonkey 脚本
 ├── papers.json             # 论文数据库（可读、可 git diff）
+├── config.json             # API 配置
+├── pdfs/                   # 已下载 PDF
+├── pyproject.toml          # 包构建配置
+├── run.bat / run.sh        # 启动脚本
+└── watch_downloads.ps1     # PDF 自动归档
+```
 ├── config.json             # API 配置
 ├── pdfs/                   # 已下载 PDF
 ├── pyproject.toml          # 包构建配置
@@ -260,21 +252,33 @@ Litmanger/
 
 ### CLI 命令
 
+**独立版服务器**（`python server.py`，端口 8766）—— 主界面：
+
 | 命令 | 说明 |
 |------|------|
-| `litmanger <url>` | 从 URL 添加论文 + 自动下载 PDF |
+| `python server.py` | 启动仪表板 `http://127.0.0.1:8766`（自动打开浏览器） |
+
+所有功能通过 Web 界面操作：添加论文、排序、过滤、下载 PDF、AI 对话、Markdown 笔记、评论、主题、导出。
+
+**litmanger 包 CLI**（需先 `pip install -e .`，端口 8765）：
+
+| 命令 | 说明 |
+|------|------|
+| `litmanger <url>` | 从 URL 添加论文 |
 | `litmanger add <url>` | 添加论文（加 `--no-download` 跳过 PDF） |
-| `litmanger list` | 列出所有论文及元数据 |
-| `litmanger download <id>` | 重新下载某篇论文的 PDF |
+| `litmanger list` | 列出所有论文 |
+| `litmanger download <id>` | 重新下载 PDF |
 | `litmanger open <id>` | 在浏览器中打开论文 |
 | `litmanger mark-done <id>` | 标记 PDF 已下载 |
-| `litmanger html` | 生成静态 HTML 仪表板 (`paper_library.html`) |
-| `litmanger server` | 启动本地仪表板 `http://127.0.0.1:8765` |
-| `litmanger server --port 9000` | 自定义端口 |
+| `litmanger html` | 生成静态 `paper_library.html` |
+| `litmanger server` | 仪表板 `http://127.0.0.1:8765` |
 
 ### 浏览器集成
 
-**Bookmarklet：** 访问 `http://127.0.0.1:8765/install`，把 **Save PDF** 按钮拖到书签栏。在期刊页面点击即可保存 PDF。
+> **需要 litmanger 包**（`pip install -e .` + `litmanger server` 启动到端口 8765）。  
+> 独立版 `python server.py`（端口 8766）不含 bookmarklet 路由。
+
+**Bookmarklet：** 访问 `http://127.0.0.1:8765/install`，把 **Save PDF** 按钮拖到书签栏。在期刊页面点击即可保存 PDF 到 `pdfs/`。
 
 **Tampermonkey 脚本：** 安装 [Tampermonkey](https://www.tampermonkey.net/) 后，打开 `http://127.0.0.1:8765/save-paper.user.js`。在 APS、arXiv、Nature 等期刊页面自动显示浮动保存按钮。
 
