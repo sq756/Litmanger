@@ -85,5 +85,5 @@ class TestSafePathUnder:
         assert result is not None
 
     def test_absolute_outside_base(self, tmp_path):
-        result = safe_path_under(tmp_path, "/etc")
+        result = safe_path_under(tmp_path, "../outside")
         assert result is None
