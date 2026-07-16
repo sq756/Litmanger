@@ -38,8 +38,50 @@ jobs:
       - name: Build standalone
         run: python build_exe.py
 
+      - name: Create zip archive
+        shell: bash
+        run: |
+          cd dist/Litmanger
+          zip -r ../../litmanger-${{ matrix.os }}.zip ./*
+          cd ../..
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: dist/Litmanger/
+          path: litmanger-${{ matrix.os }}.zip
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Litmanger ${{ github.ref_name }}
+          body: |
+            ## Litmanger ${{ github.ref_name }}
+
+            Standalone executables — no Python required. Just download and run.
+
+            | Platform | Download |
+            |----------|----------|
+            | Windows | `litmanger-windows.zip` |
+            | macOS | `litmanger-macos.zip` |
+            | Linux | `litmanger-linux.zip` |
+
+            ### How to use
+            Unzip → double-click `start.bat` (Windows) or run `./Litmanger` (macOS/Linux).
+            Opens http://127.0.0.1:8766 automatically.
+          files: |
+            artifacts/litmanger-windows/litmanger-windows-latest.zip
+            artifacts/litmanger-macos/litmanger-macos-latest.zip
+            artifacts/litmanger-linux/litmanger-linux-latest.zip
+          draft: false
+          prerelease: false
