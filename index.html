@@ -75,6 +75,7 @@ input:focus,textarea:focus{border-color:var(--a)}
 .cmt{background:var(--bg);border-radius:var(--r);padding:.4rem .6rem;margin-bottom:.35rem;line-height:1.4}
 .cmt .cmt-author{font-weight:600;font-size:.72rem;color:var(--a)}
 .cmt .cmt-time{font-size:.65rem;color:var(--t2);margin-left:.4rem}
+.cmt .cmt-del{float:right;cursor:pointer;font-size:.85rem;color:var(--t2);opacity:.4;line-height:1}.cmt .cmt-del:hover{opacity:1;color:#ef4444}
 .cmt .cmt-text{font-size:.76rem;margin-top:.15rem}
 .cmt-inp{display:flex;gap:.25rem;padding:.35rem .5rem;border-top:1px solid var(--b);flex-shrink:0}
 .cmt-inp input{flex:1;padding:.3rem .4rem;border-radius:var(--r);font-size:.72rem}
@@ -491,10 +492,20 @@ function renderComments(comments){
   for(var i=0;i<comments.length;i++){
     var c=comments[i];
     var verified=c.sig?' &#10003;':'';
-    html+='<div class="cmt"><span class="cmt-author">'+esc(c.author||'Anonymous')+verified+'</span><span class="cmt-time">'+c.time+'</span><div class="cmt-text">'+esc(c.text)+'</div></div>';
+    html+='<div class="cmt"><span class="cmt-author">'+esc(c.author||'Anonymous')+verified+'</span><span class="cmt-time">'+c.time+'</span><span class="cmt-del" onclick="deleteComment(\''+c.id+'\')" title="Delete">&times;</span><div class="cmt-text">'+esc(c.text)+'</div></div>';
   }
   el.innerHTML=html;
   el.scrollTop=el.scrollHeight;
+}
+
+async function deleteComment(cid){
+  var p=getPaper(selectedId);if(!p||!p.doi){return}
+  if(!confirm('Delete this comment?'))return;
+  try{
+    var r=await fetch('/api/comments/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({doi:p.doi,id:cid})});
+    var d=await r.json();
+    if(d.ok){cmtsCache[p.doi]=d.comments;renderComments(d.comments);toast('Comment deleted')}else toast('Error: '+d.error);
+  }catch(e){toast('Failed: '+e.message)}
 }
 
 async function postComment(){

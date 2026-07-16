@@ -1034,6 +1034,26 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
                     self._json({"ok": False, "error": str(e)}, 500)
                 return
 
+            # --- /api/comments/delete ---
+            if parsed.path == "/api/comments/delete":
+                try:
+                    d = json.loads(body.decode("utf-8"))
+                    doi = d.get("doi", "").strip()
+                    cid = d.get("id", "").strip()
+                    if not doi or not cid:
+                        self._json({"ok": False, "error": "Need doi and id"}, 400)
+                        return
+                    comments = load_comments()
+                    existing = comments.get(doi, [])
+                    comments[doi] = [c for c in existing if c.get("id") != cid]
+                    if not comments[doi]:
+                        del comments[doi]
+                    save_comments(comments)
+                    self._json({"ok": True, "comments": comments.get(doi, [])})
+                except Exception as e:
+                    self._json({"ok": False, "error": str(e)}, 500)
+                return
+
             # --- /api/sign-comment ---
             if parsed.path == "/api/sign-comment":
                 try:

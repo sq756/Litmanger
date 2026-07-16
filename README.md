@@ -15,24 +15,15 @@ Traditional reference managers (Zotero, Mendeley, EndNote) force you into folder
 
 ### Quick Start
 
-**Double-click `run.bat` (Windows)** or run:
+| Platform | How to run |
+|----------|-----------|
+| **Windows** | Double-click `run.bat` |
+| **macOS / Linux** | `chmod +x run.sh && ./run.sh` |
+| **Any (Python)** | `python server.py` |
 
-```bash
-python server.py                                # Dashboard → http://127.0.0.1:8766
-```
+Then open **http://127.0.0.1:8766** in your browser. No `pip install` needed — uses only the Python standard library.
 
-No `pip install` needed — uses only the Python standard library.
-
-**Alternative: litmanger package (full CLI):**
-
-```bash
-pip install -e .
-litmanger server                                # Dashboard → http://127.0.0.1:8765
-litmanger list                                  # List all papers
-litmanger https://doi.org/10.1103/PhysRevB.113.235157  # Add a paper
-```
-
-The standalone `server.py` (port 8766) is the main UI with all features: three-panel layout, AI chat, PDF preview, sort, themes, Markdown notes, and comments. The litmanger package (port 8765) adds CLI tools, bookmarklet support, and PDF download with browser cookies.
+> **Standalone executables** (no Python required) are built automatically by GitHub Actions for Windows, macOS, and Linux. Download the latest from the [Releases page](https://github.com/sq756/Litmanger/releases).
 
 ### Features
 
@@ -168,30 +159,15 @@ MIT
 
 ### 快速开始
 
-**双击 `run.bat`（Windows）** 或运行：
+| 平台 | 运行方式 |
+|------|----------|
+| **Windows** | 双击 `run.bat` |
+| **macOS / Linux** | `chmod +x run.sh && ./run.sh` |
+| **任意平台（有 Python）** | `python server.py` |
 
-```bash
-python server.py                                # 仪表板 → http://127.0.0.1:8766
-```
+然后浏览器打开 **http://127.0.0.1:8766**。不需要 `pip install` —— 只用 Python 标准库。
 
-不需要 `pip install` —— 只用 Python 标准库。
-
-**可选：litmanger 包（完整 CLI）：**
-
-```bash
-pip install -e .
-litmanger server                                # 仪表板 → http://127.0.0.1:8765
-litmanger list                                  # 列出所有论文
-litmanger https://doi.org/10.1103/PhysRevB.113.235157  # 添加论文
-```
-
-独立版 `server.py`（端口 8766）是主入口，包含所有功能：三栏布局、AI 对话、PDF 预览、排序、主题、Markdown 笔记和评论。litmanger 包（端口 8765）额外提供 CLI 工具、bookmarklet 支持和浏览器 cookie PDF 下载。
-
-**Windows 快捷启动：**
-
-```cmd
-双击 run.bat                # 自动检测 Python，启动 server.py → 浏览器打开
-```
+> **免 Python 独立可执行文件**由 GitHub Actions 自动为 Windows、macOS、Linux 三端构建。从 [Releases 页面](https://github.com/sq756/Litmanger/releases) 下载最新版。
 
 ### 功能
 
