@@ -30,6 +30,9 @@ def build():
         "--name", "Litmanger",
         "--clean",
         "--noconsole",
+        "--hidden-import", "cryptography",
+        "--hidden-import", "cryptography.hazmat.primitives.asymmetric.ed25519",
+        "--hidden-import", "cryptography.hazmat.primitives.serialization",
         "server.py",
     ]
     subprocess.check_call(cmd)

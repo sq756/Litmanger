@@ -2,10 +2,13 @@
 LitManager - Flat-tag AI-powered literature management.
 MIT License
 """
+import base64
+import hashlib
 import http.server
 import json
 import os
 import re
+import secrets
 import ssl
 import sys
 import threading
@@ -24,6 +27,7 @@ else:
 DB_PATH = SCRIPT_DIR / "papers.json"
 CONFIG_PATH = SCRIPT_DIR / "config.json"
 COMMENTS_PATH = SCRIPT_DIR / "comments.json"
+IDENTITY_PATH = SCRIPT_DIR / "identity.json"
 PDF_DIR = SCRIPT_DIR / "pdfs"
 PDF_DIR.mkdir(exist_ok=True)
 PORT = 8766
@@ -253,6 +257,61 @@ def load_comments():
 def save_comments(comments):
     with open(COMMENTS_PATH, "w", encoding="utf-8") as f:
         json.dump(comments, f, indent=2, ensure_ascii=False)
+
+
+def load_identity():
+    """Load or generate an Ed25519 keypair for this installation."""
+    if IDENTITY_PATH.exists():
+        with open(IDENTITY_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    # Generate new keypair using Python cryptography if available
+    try:
+        from cryptography.hazmat.primitives.asymmetric import ed25519
+        from cryptography.hazmat.primitives import serialization
+
+        priv = ed25519.Ed25519PrivateKey.generate()
+        pub = priv.public_key()
+        priv_bytes = priv.private_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PrivateFormat.Raw,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+        pub_bytes = pub.public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+        ident = {
+            "pubkey": base64.b64encode(pub_bytes).decode("ascii"),
+            "privkey": base64.b64encode(priv_bytes).decode("ascii"),
+        }
+    except ImportError:
+        # Fallback: use python-ecdsa or just generate random identifier
+        # Without 'cryptography', we use a hash-based identity (no sig verification)
+        seed = secrets.token_bytes(32)
+        ident = {
+            "pubkey": base64.b64encode(hashlib.sha256(seed).digest()).decode("ascii"),
+            "seed": base64.b64encode(seed).decode("ascii"),
+        }
+    with open(IDENTITY_PATH, "w", encoding="utf-8") as f:
+        json.dump(ident, f, indent=2)
+    return ident
+
+
+def sign_comment_data(data_str):
+    """Sign a comment payload. Returns (pubkey_b64, sig_b64) or (None, None)."""
+    ident = load_identity()
+    pubkey_b64 = ident["pubkey"]
+    try:
+        from cryptography.hazmat.primitives.asymmetric import ed25519
+        from cryptography.hazmat.primitives import serialization
+
+        priv_bytes = base64.b64decode(ident["privkey"])
+        priv = ed25519.Ed25519PrivateKey.from_private_bytes(priv_bytes)
+        sig = priv.sign(data_str.encode("utf-8"))
+        sig_b64 = base64.b64encode(sig).decode("ascii")
+        return pubkey_b64, sig_b64
+    except ImportError:
+        return None, None
 
 
 def generate_html_page(db):
@@ -729,29 +788,56 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     if not bu or not ak:
                         self._json({"ok": False, "error": "Need base_url and api_key"}, 400)
                         return
-                    api_url = bu.rstrip("/") + "/models"
-                    req = urllib.request.Request(api_url, method="GET")
-                    req.add_header("Authorization", f"Bearer {ak}")
-                    req.add_header("User-Agent", "LitManager/1.0")
-                    ctx = make_ssl_context()
-                    with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
-                        result = json.loads(resp.read().decode("utf-8"))
                     models = []
-                    for m in result.get("data", []):
-                        mid = m.get("id", "")
-                        if mid and not any(skip in mid.lower() for skip in ("embed", "moderat", "audio", "tts", "whisper", "dall", "image", "vision")):
-                            models.append(mid)
-                    # Prefer chat/completion models, sort smartly
+                    from_api = False
+                    # Try GET /models endpoint (OpenAI-compatible)
+                    try:
+                        api_url = bu.rstrip("/") + "/models"
+                        req = urllib.request.Request(api_url, method="GET")
+                        req.add_header("Authorization", f"Bearer {ak}")
+                        req.add_header("User-Agent", "LitManager/1.0")
+                        ctx = make_ssl_context()
+                        with urllib.request.urlopen(req, timeout=10, context=ctx) as resp:
+                            result = json.loads(resp.read().decode("utf-8"))
+                        for m in result.get("data", []):
+                            mid = m.get("id", "")
+                            if mid and not any(skip in mid.lower() for skip in ("embed", "moderat", "audio", "tts", "whisper", "dall", "image", "vision")):
+                                models.append(mid)
+                        if models:
+                            from_api = True
+                    except Exception:
+                        pass  # Fall back to known models below
+
+                    # If API call failed or returned empty, use known models per provider
+                    if not from_api:
+                        known = {
+                            "deepseek": ["deepseek-chat", "deepseek-reasoner", "deepseek-v3", "deepseek-v4-pro"],
+                            "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo", "o1", "o1-mini", "o3-mini"],
+                            "anthropic": ["claude-sonnet-4-20250514", "claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"],
+                            "ollama": ["llama3", "mistral", "gemma2", "qwen2", "codellama"],
+                            "openrouter": ["openai/gpt-4o", "anthropic/claude-sonnet-4", "google/gemini-2.5-pro"],
+                            "siliconflow": ["deepseek-ai/DeepSeek-V3", "Qwen/Qwen2.5-72B-Instruct", "Pro/Llama-3.3-70B-Instruct"],
+                            "groq": ["llama-3.3-70b-versatile", "mixtral-8x7b-32768", "gemma2-9b-it"],
+                        }
+                        host = bu.lower()
+                        matched = None
+                        for keyword in known:
+                            if keyword in host:
+                                matched = known[keyword]
+                                break
+                        if matched:
+                            models = matched
+                        else:
+                            models = ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo", "deepseek-chat", "deepseek-reasoner", "claude-sonnet-4-20250514"]
+
+                    # Sort smartly
                     def _score(mid):
                         s = mid.lower()
                         if "chat" in s or "instruct" in s: return 0
                         if "completion" in s or "gpt" in s or "claude" in s or "deepseek" in s or "qwen" in s: return 1
                         return 2
                     models.sort(key=_score)
-                    self._json({"ok": True, "models": models})
-                except urllib.error.HTTPError as e:
-                    eb = e.read().decode("utf-8", errors="replace")
-                    self._json({"ok": False, "error": f"API Error ({e.code}): {eb[:200]}"}, 502)
+                    self._json({"ok": True, "models": models, "from_api": from_api})
                 except Exception as e:
                     self._json({"ok": False, "error": str(e)}, 500)
                 return
@@ -781,9 +867,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         return
                     comments = load_comments()
                     existing = comments.get(doi, [])
-                    next_id = str(len(existing) + 1)
+                    # Generate a short unique ID (locally unique + timestamp)
+                    cid = secrets.token_hex(6)
                     entry = {
-                        "id": next_id,
+                        "id": cid,
                         "author": author,
                         "text": text,
                         "time": date.today().isoformat(),
@@ -791,6 +878,30 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     comments[doi] = existing + [entry]
                     save_comments(comments)
                     self._json({"ok": True, "comments": comments[doi]})
+                except Exception as e:
+                    self._json({"ok": False, "error": str(e)}, 500)
+                return
+
+            # --- /api/sign-comment ---
+            if parsed.path == "/api/sign-comment":
+                try:
+                    d = json.loads(body.decode("utf-8"))
+                    ident = load_identity()
+                    pubkey_b64 = ident["pubkey"]
+                    # Build signature payload: doi|id|author|text|time|pubkey
+                    payload = "|".join([
+                        d.get("doi", ""),
+                        d.get("id", ""),
+                        d.get("author", ""),
+                        d.get("text", ""),
+                        d.get("time", ""),
+                        pubkey_b64,
+                    ])
+                    _, sig_b64 = sign_comment_data(payload)
+                    signed = dict(d)
+                    signed["pubkey"] = pubkey_b64
+                    signed["sig"] = sig_b64
+                    self._json({"ok": True, "comment": signed})
                 except Exception as e:
                     self._json({"ok": False, "error": str(e)}, 500)
                 return

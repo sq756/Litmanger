@@ -26,3 +26,6 @@ build/
 # Generated files
 paper_library.html
 comments.json
+identity.json
+relay_comments.json
+relay_peers.json

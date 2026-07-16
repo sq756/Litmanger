@@ -93,12 +93,13 @@ input:focus,textarea:focus{border-color:var(--a)}
 <div id="configPanel" style="display:none;padding:.5rem">
 <div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.35rem"><span style="width:40px;font-size:.75rem">URL</span><input id="cfgUrl" placeholder="https://api.deepseek.com/v1" style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem"></div>
 <div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.35rem"><span style="width:40px;font-size:.75rem">Key</span><input type="password" id="cfgKey" placeholder="sk-..." style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem"></div>
-<div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.5rem"><span style="width:40px;font-size:.75rem">Model</span><select id="cfgModel" style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem;background:var(--p);color:var(--t);border:1px solid var(--b)"><option value="deepseek-chat">deepseek-chat</option></select><button class="btn btn-o btn-s" id="fetchModelsBtn" onclick="fetchModels()" title="Auto-detect models from API">&#8635;</button></div>
+<div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.35rem"><span style="width:40px;font-size:.75rem">Model</span><select id="cfgModel" style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem;background:var(--p);color:var(--t);border:1px solid var(--b)"><option value="deepseek-chat">deepseek-chat</option></select><button class="btn btn-o btn-s" id="fetchModelsBtn" onclick="fetchModels()" title="Auto-detect models from API">&#8635;</button></div>
+<div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.5rem"><span style="width:40px;font-size:.75rem">Relay</span><input id="cfgRelay" placeholder="Relay server URL" style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem"></div>
 <div style="display:flex;gap:.35rem"><button class="btn btn-p btn-s" onclick="saveConfig()">Save</button><button class="btn btn-o btn-s" onclick="toggleConfig()">Cancel</button></div></div>
 <div class="chat-msgs" id="chatMessages"><div class="ec">Configure API in Settings</div></div>
 <div class="chat-inp"><textarea id="chatInput" placeholder="Ask anything..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat(event)}"></textarea><button class="btn btn-p btn-s" onclick="sendChat(event)">Send</button></div>
 <div class="cmt-section" id="commentsSection" style="display:none">
-<div class="cmt-header" onclick="toggleComments()"><span id="cmtToggle">&#9654;</span> Comments <span id="cmtCount" style="font-weight:400"></span></div>
+<div class="cmt-header" onclick="toggleComments()"><span id="cmtToggle">&#9654;</span> Comments <span id="cmtCount" style="font-weight:400"></span><span style="flex:1"></span><span class="cmt-mode" id="cmtMode" style="font-size:.65rem;color:var(--t2)">local</span></div>
 <div class="cmt-list" id="cmtList"></div>
 <div class="cmt-inp"><input class="name-inp" id="cmtName" placeholder="Name"><input id="cmtText" placeholder="Add a comment..."><button class="btn btn-p btn-s" onclick="postComment()">Post</button></div>
 </div></div>
@@ -127,6 +128,8 @@ async function loadConfig(){
     setModelSelect(cfg.model||'deepseek-chat');
     var saved=localStorage.getItem('litmanager_apikey');
     if(saved){try{cfg.api_key=atob(saved);document.getElementById('cfgKey').value=cfg.api_key}catch(e){}}
+    var relay=localStorage.getItem('litmanager_relay');
+    if(relay){document.getElementById('cfgRelay').value=relay}
   }catch(e){}
 }
 
@@ -263,14 +266,30 @@ function generateHtml(){fetch('/api/generate-html',{method:'POST'}).then(functio
 document.addEventListener('click',function(e){var d=document.getElementById('menuDrop');if(d&&d.style.display==='block'&&!e.target.closest('.menu-wrap'))d.style.display='none'})
 
 // === Comments ===
+function getRelayUrl(){return localStorage.getItem('litmanager_relay')||''}
 async function loadComments(doi){
-  if(!doi){document.getElementById('cmtList').innerHTML='<div style="color:var(--t2);font-size:.75rem">No DOI — comments unavailable</div>';return}
-  try{
-    var r=await fetch('/api/comments?doi='+encodeURIComponent(doi));
-    var comments=await r.json();
-    cmtsCache[doi]=comments;
-    renderComments(comments);
-  }catch(e){document.getElementById('cmtList').innerHTML='<div style="color:var(--t2);font-size:.75rem">Could not load comments</div>'}
+  if(!doi){document.getElementById('cmtList').innerHTML='<div style="color:var(--t2);font-size:.75rem">No DOI</div>';return}
+  var relay=getRelayUrl();
+  document.getElementById('cmtMode').textContent=relay?'relay':'local';
+
+  // Always load local comments first
+  var local=[];
+  try{var r=await fetch('/api/comments?doi='+encodeURIComponent(doi));local=await r.json()}catch(e){}
+  cmtsCache[doi]=local;
+
+  // If relay configured, also fetch from relay
+  if(relay){
+    try{
+      var rr=await fetch(relay.replace(/\/$/,'')+'/comments?doi='+encodeURIComponent(doi));
+      var remote=await rr.json();
+      // Merge: dedup by id, keep remote comments
+      var seen={};
+      for(var i=0;i<local.length;i++)seen[local[i].id]=true;
+      for(var j=0;j<remote.length;j++){if(!seen[remote[j].id])local.push(remote[j])}
+      cmtsCache[doi]=local;
+    }catch(e){console.log('Relay fetch failed:',e)}
+  }
+  renderComments(local);
 }
 
 function renderComments(comments){
@@ -281,7 +300,8 @@ function renderComments(comments){
   var html='';
   for(var i=0;i<comments.length;i++){
     var c=comments[i];
-    html+='<div class="cmt"><span class="cmt-author">'+esc(c.author||'Anonymous')+'</span><span class="cmt-time">'+c.time+'</span><div class="cmt-text">'+esc(c.text)+'</div></div>';
+    var verified=c.sig?' &#10003;':'';
+    html+='<div class="cmt"><span class="cmt-author">'+esc(c.author||'Anonymous')+verified+'</span><span class="cmt-time">'+c.time+'</span><div class="cmt-text">'+esc(c.text)+'</div></div>';
   }
   el.innerHTML=html;
   el.scrollTop=el.scrollHeight;
@@ -291,15 +311,42 @@ async function postComment(){
   var p=getPaper(selectedId);if(!p||!p.doi){toast('No DOI for this paper');return}
   var author=document.getElementById('cmtName').value.trim()||'Anonymous';
   var text=document.getElementById('cmtText').value.trim();if(!text)return;
+
+  // First save locally
+  var d;
   try{
     var r=await fetch('/api/comments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({doi:p.doi,author:author,text:text})});
-    var d=await r.json();
-    if(d.ok){
-      document.getElementById('cmtText').value='';
-      cmtsCache[p.doi]=d.comments;
-      renderComments(d.comments);
-    }else toast('Error: '+d.error);
-  }catch(e){toast('Failed: '+e.message)}
+    d=await r.json();
+  }catch(e){toast('Failed: '+e.message);return}
+  if(!d.ok){toast('Error: '+d.error);return}
+
+  document.getElementById('cmtText').value='';
+  var localList=d.comments;
+  var newComment=localList[localList.length-1];
+
+  // If relay configured, sign and send
+  var relay=getRelayUrl();
+  if(relay){
+    try{
+      // Sign the comment via server
+      var sr=await fetch('/api/sign-comment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(newComment)});
+      var signed=await sr.json();
+      if(signed.ok){
+        // Post to relay
+        var rr=await fetch(relay.replace(/\/$/,'')+'/comments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(signed.comment)});
+        var rd=await rr.json();
+        if(rd.ok){
+          cmtsCache[p.doi]=rd.comments;
+          renderComments(rd.comments);
+          toast('Posted to relay!');
+          return;
+        }
+      }
+    }catch(e){console.log('Relay post failed:',e)}
+  }
+
+  cmtsCache[p.doi]=localList;
+  renderComments(localList);
 }
 
 function toggleComments(){
@@ -323,7 +370,7 @@ async function sendChat(e){var inp=document.getElementById('chatInput');var msg=
 try{var r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMsgs})});var d=await r.json();if(d.ok&&d.message){chatMsgs.push(d.message);renderChat()}else{chatMsgs.push({role:'assistant',content:'Error: '+(d.error||'Unknown')});renderChat()}}catch(e){chatMsgs.push({role:'assistant',content:'Network error: '+e.message});renderChat()}btn.disabled=false;btn.innerHTML=orig}
 
 function askAboutPaper(){if(!selectedId)return;var p=getPaper(selectedId);if(!p)return;if(!cfg.api_key){toast('Configure API in Settings first');toggleConfig();return}var ctx='I want to discuss this paper:\n\nTitle: '+p.title+'\nAuthors: '+(p.authors||[]).join(', ')+'\nJournal: '+(p.journal||'')+'\nYear: '+(p.year||'')+'\nDOI: '+(p.doi||'')+'\nAbstract: '+(p.abstract||'N/A');if(p.notes)ctx+='\nMy notes: '+p.notes;chatMsgs.push({role:'user',content:ctx});renderChat();document.getElementById('chatInput').focus();document.getElementById('chatMessages').scrollTop=document.getElementById('chatMessages').scrollHeight}
-function toggleConfig(){var p=document.getElementById('configPanel');if(p.style.display==='none'){p.style.display='block';document.getElementById('cfgUrl').value=cfg.base_url||'';document.getElementById('cfgKey').value=cfg.api_key||'';setModelSelect(cfg.model||'deepseek-chat')}else p.style.display='none'}
+function toggleConfig(){var p=document.getElementById('configPanel');if(p.style.display==='none'){p.style.display='block';document.getElementById('cfgUrl').value=cfg.base_url||'';document.getElementById('cfgKey').value=cfg.api_key||'';setModelSelect(cfg.model||'deepseek-chat');document.getElementById('cfgRelay').value=localStorage.getItem('litmanager_relay')||''}else p.style.display='none'}
 // === Model autodetect ===
 function setModelSelect(currentModel){
   var sel=document.getElementById('cfgModel');
@@ -349,12 +396,13 @@ async function fetchModels(){
       }
       // Try to select current model
       setModelSelect(cfg.model||d.models[0]);
-      toast('Found '+d.models.length+' models');
+      toast('Found '+d.models.length+' models'+(d.from_api?'':' (preset)')+'. Select one and Save.');
     }else{toast('Could not fetch models: '+(d.error||'No models returned'))}
   }catch(e){toast('Failed: '+e.message)}
   btn.disabled=false;btn.innerHTML=orig;
 }
-async function saveConfig(){var base_url=document.getElementById('cfgUrl').value.trim();var api_key=document.getElementById('cfgKey').value.trim();var sel=document.getElementById('cfgModel');var model=sel.options[sel.selectedIndex].value||'deepseek-chat';
+async function saveConfig(){var base_url=document.getElementById('cfgUrl').value.trim();var api_key=document.getElementById('cfgKey').value.trim();var sel=document.getElementById('cfgModel');var model=sel.options[sel.selectedIndex].value||'deepseek-chat';var relay=document.getElementById('cfgRelay').value.trim();
+localStorage.setItem('litmanager_relay',relay);
 try{var r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base_url:base_url,api_key:api_key,model:model})});var d=await r.json();if(d.ok){cfg=d.config;cfg.api_key=api_key;localStorage.setItem('litmanager_apikey',btoa(api_key));document.getElementById('configPanel').style.display='none';toast('API config saved')}else toast('Error: '+d.error)}catch(e){toast('Failed: '+e.message)}}
 
 // === Drag handles ===
