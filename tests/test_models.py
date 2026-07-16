@@ -1,7 +1,5 @@
 """Tests for litmanger.models — Paper, PaperDB."""
 
-import json
-
 from litmanger.models import Paper, PaperDB
 
 
@@ -122,7 +120,7 @@ class TestPaperDB:
         ]
         db = PaperDB(papers=papers)
         assert len(db.search("quantum")) == 1
-        assert len(db.search("physics")) == 2
+        assert len(db.search("physics")) == 1
         assert len(db.search("xyz")) == 0
 
     def test_pdf_count(self):

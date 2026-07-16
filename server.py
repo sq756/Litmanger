@@ -6,11 +6,9 @@ import base64
 import hashlib
 import http.server
 import json
-import os
 import re
 import secrets
 import shutil
-import ssl
 import sys
 import threading
 import urllib.error
@@ -19,19 +17,17 @@ import urllib.request
 from datetime import date
 from pathlib import Path
 
-# ── Import shared utilities from the litmanger package ──
-from litmanger.utils import (
-    BROWSER_HEADERS,
-    extract_doi_from_html,
-    extract_meta_name,
-    extract_meta_names,
-    make_ssl_context,
-    normalize_author_name,
-)
 from litmanger.fetcher import (
     _guess_pdf_url,
     fetch_bibtex,
     fetch_crossref_metadata,
+)
+from litmanger.utils import (
+    BROWSER_HEADERS,
+    extract_doi_from_html,
+    extract_meta_name,
+    make_ssl_context,
+    normalize_author_name,
 )
 
 # When bundled by PyInstaller, use the exe's directory instead of __file__
@@ -120,7 +116,7 @@ def load_db():
             return _db_cache
         db_path = resolve_db_path()
         if db_path.exists():
-            with open(db_path, "r", encoding="utf-8") as f:
+            with open(db_path, encoding="utf-8") as f:
                 _db_cache = json.load(f)
         else:
             _db_cache = {"papers": []}
@@ -137,7 +133,7 @@ def save_db(db):
 
 def load_config():
     if CONFIG_PATH.exists():
-        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        with open(CONFIG_PATH, encoding="utf-8") as f:
             return json.load(f)
     return {"base_url": "", "api_key": "", "model": "deepseek-chat"}
 
@@ -202,7 +198,8 @@ def collect_paper(url):
     # arXiv: extract DOI from arxiv-doi-link in HTML
     if arxiv_id and not doi and html:
         m = re.search(r'<a\s+[^>]*href="https?://doi\.org/(10\.\d{4,}/[^"]+)"[^>]*>', html, re.I)
-        if m: doi = m.group(1).rstrip(".")
+        if m:
+            doi = m.group(1).rstrip(".")
 
     if not doi and not arxiv_id:
         return None, "Could not extract DOI or arXiv ID"
@@ -210,19 +207,21 @@ def collect_paper(url):
     # Check if already in library
     db = load_db()
     for p in db["papers"]:
-        if arxiv_id and p.get("arxiv_id") == arxiv_id: return p, None
-        if doi and p.get("doi") == doi: return p, None
+        if arxiv_id and p.get("arxiv_id") == arxiv_id:
+            return p, None
+        if doi and p.get("doi") == doi:
+            return p, None
 
     # Extract metadata
     if html:
-        title = extract_meta_namehtml, "citation_title")
+        title = extract_meta_name(html, "citation_title")
         if title:
             title = title.replace("&#39;", "'").replace("&amp;", "&").replace("&quot;", '"').replace("&lt;", "<").replace("&gt;", ">")
         authors = [normalize_author_name(a) for a in re.findall(r'<meta\s+name="citation_author"\s+content="([^"]+)"', html)]
-        journal = extract_meta_namehtml, "citation_journal_title")
-        pub_date = extract_meta_namehtml, "citation_date")
-        pdf_url_meta = extract_meta_namehtml, "citation_pdf_url")
-        abstract = extract_meta_namehtml, "citation_abstract")
+        journal = extract_meta_name(html, "citation_journal_title")
+        pub_date = extract_meta_name(html, "citation_date")
+        pdf_url_meta = extract_meta_name(html, "citation_pdf_url")
+        abstract = extract_meta_name(html, "citation_abstract")
     elif crossref_meta:
         title = crossref_meta.get("title")
         authors = crossref_meta.get("authors", [])
@@ -232,7 +231,8 @@ def collect_paper(url):
         abstract = crossref_meta.get("abstract")
         if crossref_meta.get("year"):
             pub_date = crossref_meta["year"]
-            if crossref_meta.get("month"): pub_date += "/" + crossref_meta["month"]
+            if crossref_meta.get("month"):
+                pub_date += "/" + crossref_meta["month"]
     else:
         title, authors, journal, pub_date, pdf_url_meta, abstract = "Unknown", [], "", None, None, None
 
@@ -241,7 +241,8 @@ def collect_paper(url):
 
     if arxiv_id:
         pdf_default = f"https://arxiv.org/pdf/{arxiv_id}"
-        if not journal: journal = "arXiv"
+        if not journal:
+            journal = "arXiv"
     else:
         pdf_default = _guess_pdf_url(final_url, doi, html)
 
@@ -254,7 +255,8 @@ def collect_paper(url):
     if bibtex:
         for fld, key in [("volume", "volume"), ("number", "issue"), ("pages", "pages")]:
             m = re.search(rf"{fld}\s*=\s*\{{([^}}]+)\}}", bibtex)
-            if m: paper[key] = m.group(1)
+            if m:
+                paper[key] = m.group(1)
 
     return paper, None
 
@@ -309,7 +311,7 @@ def mark_downloaded(paper_id, local_path=None):
 def load_comments():
     cpath = resolve_comments_path()
     if cpath.exists():
-        with open(cpath, "r", encoding="utf-8") as f:
+        with open(cpath, encoding="utf-8") as f:
             return json.load(f)
     return {}
 
@@ -323,12 +325,12 @@ def load_identity():
     """Load or generate an Ed25519 keypair for this installation."""
     ipath = resolve_identity_path()
     if ipath.exists():
-        with open(ipath, "r", encoding="utf-8") as f:
+        with open(ipath, encoding="utf-8") as f:
             return json.load(f)
     # Generate new keypair using Python cryptography if available
     try:
-        from cryptography.hazmat.primitives.asymmetric import ed25519
         from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import ed25519
 
         priv = ed25519.Ed25519PrivateKey.generate()
         pub = priv.public_key()
@@ -363,8 +365,7 @@ def sign_comment_data(data_str):
     ident = load_identity()
     pubkey_b64 = ident["pubkey"]
     try:
-        from cryptography.hazmat.primitives.asymmetric import ed25519
-        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import ed25519  # noqa: F401
 
         priv_bytes = base64.b64decode(ident["privkey"])
         priv = ed25519.Ed25519PrivateKey.from_private_bytes(priv_bytes)
@@ -1105,8 +1106,10 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
                     # Sort smartly
                     def _score(mid):
                         s = mid.lower()
-                        if "chat" in s or "instruct" in s: return 0
-                        if "completion" in s or "gpt" in s or "claude" in s or "deepseek" in s or "qwen" in s: return 1
+                        if "chat" in s or "instruct" in s:
+                            return 0
+                        if "completion" in s or "gpt" in s or "claude" in s or "deepseek" in s or "qwen" in s:
+                            return 1
                         return 2
                     models.sort(key=_score)
                     self._json({"ok": True, "models": models, "from_api": from_api})
@@ -1236,7 +1239,7 @@ def main():
     print(f"   PDFs: {resolve_pdf_dir()}")
     if used_port != PORT:
         print(f"   (Port {PORT} was in use, using {used_port} instead)")
-    print(f"   Press Ctrl+C to stop")
+    print("   Press Ctrl+C to stop")
     print("  ============================================")
     print("")
 

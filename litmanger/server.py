@@ -7,17 +7,14 @@ from __future__ import annotations
 import http.server
 import json
 import logging
-import mimetypes
 import re
-import sys
 import threading
 import urllib.parse
 from pathlib import Path
 
 from .fetcher import collect_paper
-from .models import Paper, PaperDB
-from .pdf import download_pdf
-from .templates import generate_html, TEMPLATE
+from .models import PaperDB
+from .templates import generate_html
 
 logger = logging.getLogger("litmanger.server")
 
@@ -405,11 +402,11 @@ def run_server(
     # Bind to localhost only — never 0.0.0.0
     server = ThreadedPaperServer(("127.0.0.1", port), handler)
 
-    print(f"\n  Litmanger Server")
+    print("\n  Litmanger Server")
     print(f"  Dashboard:  http://127.0.0.1:{port}")
     print(f"  Setup:      http://127.0.0.1:{port}/install")
     print(f"  PDFs:       {pdf_dir}")
-    print(f"  Press Ctrl+C to stop\n")
+    print("  Press Ctrl+C to stop\n")
 
     if open_browser:
         import webbrowser

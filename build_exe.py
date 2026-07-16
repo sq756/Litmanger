@@ -62,9 +62,8 @@ def build():
         )
     else:
         launcher = out_dir / "Litmanger"
-        exe_name = "Litmanger" + (".exe" if IS_WIN else "")
         launch_script = out_dir / "start.sh"
-        launch_script.write_text(f'#!/bin/sh\ncd "$(dirname "$0")"\nmkdir -p pdfs\n./Litmanger &\n', encoding="ascii")
+        launch_script.write_text('#!/bin/sh\ncd "$(dirname "$0")"\nmkdir -p pdfs\n./Litmanger &\n', encoding="ascii")
         launch_script.chmod(0o755)
 
     # Verify output

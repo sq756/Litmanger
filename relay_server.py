@@ -35,7 +35,7 @@ Signature is over: doi|id|author|text|time|pubkey
 from __future__ import annotations
 
 import argparse
-import hashlib
+import base64
 import http.server
 import json
 import os
@@ -47,8 +47,8 @@ from pathlib import Path
 
 # Ed25519 is in Python 3.9+ stdlib (cryptography is safer, but stdlib is zero-dep)
 try:
-    from cryptography.hazmat.primitives.asymmetric import ed25519
     from cryptography.exceptions import InvalidSignature
+    from cryptography.hazmat.primitives.asymmetric import ed25519
 
     _HAS_CRYPTO = True
 except ImportError:
@@ -73,7 +73,7 @@ _store_lock = threading.Lock()
 
 def load_store(path):
     if path.exists():
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     return {}
 
@@ -96,8 +96,6 @@ def verify_signature(comment: dict) -> bool:
     sig_b64 = comment.get("sig", "")
     if not pubkey_b64 or not sig_b64:
         return False
-
-    import base64
 
     try:
         pubkey_bytes = base64.b64decode(pubkey_b64)
@@ -271,14 +269,14 @@ def main():
     server = http.server.ThreadingHTTPServer((args.host, args.port), handler)
     server.allow_reuse_address = True
 
-    print(f"")
-    print(f"  Litmanger Comment Relay")
-    print(f"  -----------------------")
+    print("")
+    print("  Litmanger Comment Relay")
+    print("  -----------------------")
     print(f"  URL:    http://{args.host}:{args.port}")
     print(f"  Verify: {'Ed25519 ON' if not args.no_verify else 'OFF (--no-verify)'}")
     print(f"  Store:  {COMMENTS_PATH}")
-    print(f"  Press Ctrl+C to stop")
-    print(f"")
+    print("  Press Ctrl+C to stop")
+    print("")
 
     try:
         server.serve_forever()
