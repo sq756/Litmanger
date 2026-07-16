@@ -193,6 +193,8 @@ function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace
 function toast(msg){
   var t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('on');
+  clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('on')},4000);
+}
 
 // ── Splash screen ──
 var _folderConfigured=false;
