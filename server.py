@@ -720,6 +720,42 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     self._json({"ok": False, "error": str(e)}, 500)
                 return
 
+            # --- /api/list-models ---
+            if parsed.path == "/api/list-models":
+                try:
+                    d = json.loads(body.decode("utf-8"))
+                    bu = d.get("base_url", "").strip()
+                    ak = d.get("api_key", "").strip()
+                    if not bu or not ak:
+                        self._json({"ok": False, "error": "Need base_url and api_key"}, 400)
+                        return
+                    api_url = bu.rstrip("/") + "/models"
+                    req = urllib.request.Request(api_url, method="GET")
+                    req.add_header("Authorization", f"Bearer {ak}")
+                    req.add_header("User-Agent", "LitManager/1.0")
+                    ctx = make_ssl_context()
+                    with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
+                        result = json.loads(resp.read().decode("utf-8"))
+                    models = []
+                    for m in result.get("data", []):
+                        mid = m.get("id", "")
+                        if mid and not any(skip in mid.lower() for skip in ("embed", "moderat", "audio", "tts", "whisper", "dall", "image", "vision")):
+                            models.append(mid)
+                    # Prefer chat/completion models, sort smartly
+                    def _score(mid):
+                        s = mid.lower()
+                        if "chat" in s or "instruct" in s: return 0
+                        if "completion" in s or "gpt" in s or "claude" in s or "deepseek" in s or "qwen" in s: return 1
+                        return 2
+                    models.sort(key=_score)
+                    self._json({"ok": True, "models": models})
+                except urllib.error.HTTPError as e:
+                    eb = e.read().decode("utf-8", errors="replace")
+                    self._json({"ok": False, "error": f"API Error ({e.code}): {eb[:200]}"}, 502)
+                except Exception as e:
+                    self._json({"ok": False, "error": str(e)}, 500)
+                return
+
             # --- /api/generate-html ---
             if parsed.path == "/api/generate-html":
                 try:

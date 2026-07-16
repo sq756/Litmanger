@@ -93,7 +93,7 @@ input:focus,textarea:focus{border-color:var(--a)}
 <div id="configPanel" style="display:none;padding:.5rem">
 <div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.35rem"><span style="width:40px;font-size:.75rem">URL</span><input id="cfgUrl" placeholder="https://api.deepseek.com/v1" style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem"></div>
 <div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.35rem"><span style="width:40px;font-size:.75rem">Key</span><input type="password" id="cfgKey" placeholder="sk-..." style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem"></div>
-<div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.5rem"><span style="width:40px;font-size:.75rem">Model</span><input id="cfgModel" value="deepseek-chat" style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem"></div>
+<div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.5rem"><span style="width:40px;font-size:.75rem">Model</span><select id="cfgModel" style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem;background:var(--p);color:var(--t);border:1px solid var(--b)"><option value="deepseek-chat">deepseek-chat</option></select><button class="btn btn-o btn-s" id="fetchModelsBtn" onclick="fetchModels()" title="Auto-detect models from API">&#8635;</button></div>
 <div style="display:flex;gap:.35rem"><button class="btn btn-p btn-s" onclick="saveConfig()">Save</button><button class="btn btn-o btn-s" onclick="toggleConfig()">Cancel</button></div></div>
 <div class="chat-msgs" id="chatMessages"><div class="ec">Configure API in Settings</div></div>
 <div class="chat-inp"><textarea id="chatInput" placeholder="Ask anything..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat(event)}"></textarea><button class="btn btn-p btn-s" onclick="sendChat(event)">Send</button></div>
@@ -124,7 +124,7 @@ async function loadPapers(){
 
 async function loadConfig(){
   try{var r=await fetch('/api/config');cfg=await r.json();document.getElementById('cfgUrl').value=cfg.base_url||'';
-    document.getElementById('cfgModel').value=cfg.model||'deepseek-chat';
+    setModelSelect(cfg.model||'deepseek-chat');
     var saved=localStorage.getItem('litmanager_apikey');
     if(saved){try{cfg.api_key=atob(saved);document.getElementById('cfgKey').value=cfg.api_key}catch(e){}}
   }catch(e){}
@@ -323,8 +323,38 @@ async function sendChat(e){var inp=document.getElementById('chatInput');var msg=
 try{var r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMsgs})});var d=await r.json();if(d.ok&&d.message){chatMsgs.push(d.message);renderChat()}else{chatMsgs.push({role:'assistant',content:'Error: '+(d.error||'Unknown')});renderChat()}}catch(e){chatMsgs.push({role:'assistant',content:'Network error: '+e.message});renderChat()}btn.disabled=false;btn.innerHTML=orig}
 
 function askAboutPaper(){if(!selectedId)return;var p=getPaper(selectedId);if(!p)return;if(!cfg.api_key){toast('Configure API in Settings first');toggleConfig();return}var ctx='I want to discuss this paper:\n\nTitle: '+p.title+'\nAuthors: '+(p.authors||[]).join(', ')+'\nJournal: '+(p.journal||'')+'\nYear: '+(p.year||'')+'\nDOI: '+(p.doi||'')+'\nAbstract: '+(p.abstract||'N/A');if(p.notes)ctx+='\nMy notes: '+p.notes;chatMsgs.push({role:'user',content:ctx});renderChat();document.getElementById('chatInput').focus();document.getElementById('chatMessages').scrollTop=document.getElementById('chatMessages').scrollHeight}
-function toggleConfig(){var p=document.getElementById('configPanel');if(p.style.display==='none'){p.style.display='block';document.getElementById('cfgUrl').value=cfg.base_url||'';document.getElementById('cfgKey').value=cfg.api_key||'';document.getElementById('cfgModel').value=cfg.model||'deepseek-chat'}else p.style.display='none'}
-async function saveConfig(){var base_url=document.getElementById('cfgUrl').value.trim();var api_key=document.getElementById('cfgKey').value.trim();var model=document.getElementById('cfgModel').value.trim()||'deepseek-chat';
+function toggleConfig(){var p=document.getElementById('configPanel');if(p.style.display==='none'){p.style.display='block';document.getElementById('cfgUrl').value=cfg.base_url||'';document.getElementById('cfgKey').value=cfg.api_key||'';setModelSelect(cfg.model||'deepseek-chat')}else p.style.display='none'}
+// === Model autodetect ===
+function setModelSelect(currentModel){
+  var sel=document.getElementById('cfgModel');
+  if(!currentModel)return;
+  // Add current model as option if not already there
+  var found=false;
+  for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===currentModel){sel.selectedIndex=i;found=true;break}}
+  if(!found){var opt=document.createElement('option');opt.value=currentModel;opt.textContent=currentModel;sel.appendChild(opt);sel.selectedIndex=sel.options.length-1}
+}
+async function fetchModels(){
+  var base_url=document.getElementById('cfgUrl').value.trim();
+  var api_key=document.getElementById('cfgKey').value.trim();
+  if(!base_url||!api_key){toast('Enter URL and API key first');return}
+  var btn=document.getElementById('fetchModelsBtn');
+  var orig=btn.innerHTML;btn.disabled=true;btn.innerHTML='<span class="spin" style="border-top-color:var(--a);border-color:rgba(0,0,0,.15)"></span>';
+  try{
+    var r=await fetch('/api/list-models',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base_url:base_url,api_key:api_key})});
+    var d=await r.json();
+    if(d.ok&&d.models.length){
+      var sel=document.getElementById('cfgModel');sel.innerHTML='';
+      for(var i=0;i<d.models.length;i++){
+        var m=d.models[i];var opt=document.createElement('option');opt.value=m;opt.textContent=m;sel.appendChild(opt);
+      }
+      // Try to select current model
+      setModelSelect(cfg.model||d.models[0]);
+      toast('Found '+d.models.length+' models');
+    }else{toast('Could not fetch models: '+(d.error||'No models returned'))}
+  }catch(e){toast('Failed: '+e.message)}
+  btn.disabled=false;btn.innerHTML=orig;
+}
+async function saveConfig(){var base_url=document.getElementById('cfgUrl').value.trim();var api_key=document.getElementById('cfgKey').value.trim();var sel=document.getElementById('cfgModel');var model=sel.options[sel.selectedIndex].value||'deepseek-chat';
 try{var r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base_url:base_url,api_key:api_key,model:model})});var d=await r.json();if(d.ok){cfg=d.config;cfg.api_key=api_key;localStorage.setItem('litmanager_apikey',btoa(api_key));document.getElementById('configPanel').style.display='none';toast('API config saved')}else toast('Error: '+d.error)}catch(e){toast('Failed: '+e.message)}}
 
 // === Drag handles ===
