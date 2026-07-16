@@ -33,9 +33,10 @@ from litmanger.utils import (
 # When bundled by PyInstaller, use the exe's directory instead of __file__
 if getattr(sys, "frozen", False):
     SCRIPT_DIR = Path(sys.executable).parent.resolve()
-    # Data files for frozen builds are also in this directory (copied by build script)
+    BUNDLE_DIR = Path(sys._MEIPASS).resolve()
 else:
     SCRIPT_DIR = Path(__file__).parent.resolve()
+    BUNDLE_DIR = SCRIPT_DIR
 CONFIG_PATH = SCRIPT_DIR / "config.json"
 FOLDER_PREF_PATH = SCRIPT_DIR / ".litmanger_folder"
 DOWNLOADS_DIR = Path.home() / "Downloads"
@@ -666,7 +667,7 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
                 return
 
             # Serve index.html for everything else
-            fp = SCRIPT_DIR / "index.html"
+            fp = BUNDLE_DIR / "index.html"
             if fp.exists():
                 self._file(fp, "text/html; charset=utf-8")
             else:
