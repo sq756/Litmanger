@@ -1,0 +1,59 @@
+{
+  "papers": [
+    {
+      "id": "fq4j-2p2l",
+      "title": "Learning variational quantum circuit parameters with classical artificial intelligence for quantum phase transition detection",
+      "authors": [
+        "Xin Li",
+        "Zhang-Qi Yin"
+      ],
+      "journal": "Physical Review B",
+      "volume": "113",
+      "issue": "23",
+      "pages": "235157",
+      "year": "2026",
+      "month": "Jun",
+      "doi": "10.1103/fq4j-2p2l",
+      "url": "https://journals.aps.org/prb/abstract/10.1103/fq4j-2p2l",
+      "pdf_url": "https://journals.aps.org/prb/pdf/10.1103/fq4j-2p2l",
+      "bibtex": "@article{fq4j-2p2l,\n  title = {Learning variational quantum circuit parameters with classical artificial intelligence for quantum phase transition detection},\n  author = {Li, Xin and Yin, Zhang-Qi},\n  journal = {Phys. Rev. B},\n  volume = {113},\n  issue = {23},\n  pages = {235157},\n  numpages = {18},\n  year = {2026},\n  month = {Jun},\n  publisher = {American Physical Society},\n  doi = {10.1103/fq4j-2p2l},\n  url = {https://link.aps.org/doi/10.1103/fq4j-2p2l}\n}",
+      "abstract": "We propose a method that combines variational quantum circuits with classical artificial intelligence to detect quantum phase transitions. The approach uses a parameterized quantum circuit as a feature map, with classical neural networks for classification, achieving high accuracy on several model systems.",
+      "added": "2026-07-16",
+      "tags": [
+        "quantum computing",
+        "variational circuits",
+        "phase transition",
+        "machine learning"
+      ],
+      "pdf_downloaded": false,
+      "notes": ""
+    },
+    {
+      "id": "2603.28627",
+      "title": "Unknown",
+      "authors": [
+        "Cain, Madelyn",
+        "Xu, Qian",
+        "King, Robbie",
+        "Picard, Lewis R. B.",
+        "Levine, Harry",
+        "Endres, Manuel",
+        "Preskill, John",
+        "Huang, Hsin-Yuan",
+        "Bluvstein, Dolev"
+      ],
+      "journal": "arXiv",
+      "doi": "",
+      "url": "https://arxiv.org/abs/2603.28627",
+      "pdf_url": "https://arxiv.org/pdf/2603.28627",
+      "bibtex": "",
+      "abstract": "",
+      "year": "",
+      "added": "2026-07-16",
+      "tags": [],
+      "pdf_downloaded": true,
+      "arxiv_id": "2603.28627",
+      "pdf_local": "E:\\Software\\Code\\Claude desk\\litmanager\\pdfs\\2603.28627.pdf"
+    }
+  ]
+}

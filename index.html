@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>LitManager</title>
+<style>
+:root{--bg:#f0f1f5;--p:#fff;--t:#1a1a2e;--t2:#666;--a:#4f46e5;--a2:#7c3aed;--b:#e2e4e9;--h:#f5f5fa;--r:6px}
+.dark{--bg:#1a1a2e;--p:#252540;--t:#e0e0e8;--t2:#999;--a:#818cf8;--a2:#a78bfa;--b:#3a3a55;--h:#2a2a45}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--t);height:100vh;overflow:hidden}
+#app{display:flex;height:100vh}
+#left{width:340px;min-width:220px;max-width:50vw;background:var(--p);border-right:1px solid var(--b);display:flex;flex-direction:column;overflow:auto;resize:horizontal}
+#center{flex:1;min-width:280px;background:var(--p);display:flex;flex-direction:column;overflow:hidden}
+#right{width:380px;min-width:220px;max-width:50vw;background:var(--p);border-left:1px solid var(--b);display:flex;flex-direction:column;overflow:auto;resize:horizontal}
+.ph{padding:0.75rem 1rem;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:0.5rem;font-weight:600;font-size:0.85rem;min-height:48px;flex-shrink:0}
+.pb{flex:1;overflow-y:auto;padding:0.5rem}
+.btn{padding:0.4rem 0.75rem;border:none;border-radius:var(--r);font-size:0.78rem;cursor:pointer;font-weight:500;transition:all 0.15s;white-space:nowrap;display:inline-flex;align-items:center;gap:0.3rem}
+.btn-p{background:var(--a);color:#fff}.btn-p:hover{background:var(--a2)}
+.btn-o{background:transparent;color:var(--a);border:1px solid var(--b)}.btn-o:hover{background:var(--h)}
+.btn-s{padding:0.25rem 0.5rem;font-size:0.72rem}
+input,textarea{font-family:inherit;outline:none;background:var(--p);color:var(--t);border:1px solid var(--b)}
+input:focus,textarea:focus{border-color:var(--a)}
+.srch{width:100%;padding:0.5rem 0.75rem;border-radius:var(--r);font-size:0.82rem;background:var(--bg)}
+.add-bar{display:flex;gap:0.35rem;padding:0.5rem}
+.add-bar input{flex:1;padding:0.4rem 0.6rem;border-radius:var(--r);font-size:0.78rem}
+.pitem{padding:0.6rem 0.75rem;border-radius:var(--r);cursor:pointer;transition:background 0.12s;border:1px solid transparent;margin-bottom:2px}
+.pitem:hover{background:var(--h)}.pitem.sel{background:#eef2ff;border-color:var(--a)}
+.dark .pitem.sel{background:#2a2a55}
+.pitem .tl{font-size:0.82rem;font-weight:600;line-height:1.35;margin-bottom:0.2rem}
+.pitem .mt{font-size:0.7rem;color:var(--t2)}
+.tag{display:inline-block;padding:0.1rem 0.4rem;border-radius:10px;font-size:0.65rem;background:#eef2ff;color:var(--a);margin-right:0.2rem;cursor:pointer}
+.dark .tag{background:#3a3a60}
+.tag .del{margin-left:3px;opacity:0.5;font-weight:700}.tag .del:hover{opacity:1;color:#ef4444}
+.tag-add{display:inline-block;padding:0.1rem 0.4rem;border-radius:10px;font-size:0.65rem;border:1px dashed var(--b);color:var(--t2);cursor:pointer;margin-right:0.2rem}
+.ctb{display:flex;align-items:center;gap:0.5rem;padding:0.5rem 1rem;border-bottom:1px solid var(--b);min-height:40px;flex-shrink:0}
+.cc{flex:1;overflow-y:auto;padding:1.5rem}
+.dt{font-size:1.3rem;font-weight:700;line-height:1.4;margin-bottom:0.5rem}
+.dm{font-size:0.85rem;color:var(--t2);margin-bottom:1rem;line-height:1.6}
+.da{font-size:0.9rem;line-height:1.7;color:var(--t);margin-bottom:1.5rem;white-space:pre-wrap}
+.bb{background:var(--bg);border-radius:var(--r);padding:0.75rem;font-family:monospace;font-size:0.75rem;white-space:pre-wrap;overflow-x:auto;max-height:200px;overflow-y:auto}
+.ec{display:flex;align-items:center;justify-content:center;height:100%;color:var(--t2);font-size:0.9rem;flex-direction:column;gap:0.5rem}
+.chat-msgs{flex:1;overflow-y:auto;padding:0.75rem;display:flex;flex-direction:column;gap:0.5rem}
+.msg{max-width:90%;padding:0.5rem 0.75rem;border-radius:var(--r);font-size:0.82rem;line-height:1.55;word-break:break-word}
+.msg.u{align-self:flex-end;background:var(--a);color:#fff}
+.msg.a{align-self:flex-start;background:var(--bg);color:var(--t)}
+.dark .msg.a{background:#3a3a55}
+.chat-inp{padding:0.5rem;border-top:1px solid var(--b);flex-shrink:0;display:flex;gap:0.35rem}
+.chat-inp textarea{flex:1;resize:none;padding:0.5rem;border-radius:var(--r);font-size:0.82rem;min-height:36px;max-height:100px}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .5s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#1a1a2e;color:#fff;padding:0.7rem 1.2rem;border-radius:6px;font-size:0.85rem;z-index:9999;opacity:0;transform:translateY(8px);transition:all 0.25s;max-width:360px}
+.toast.on{opacity:1;transform:translateY(0)}
+.stats-bar{display:flex;gap:1.5rem;padding:0.4rem 0.75rem;font-size:0.7rem;color:var(--t2);border-bottom:1px solid var(--b);flex-shrink:0;overflow-x:auto}
+.batch-area{display:flex;flex-direction:column;gap:0.35rem;padding:0.5rem}
+.batch-area textarea{width:100%;min-height:80px;padding:0.5rem;border-radius:var(--r);font-size:0.75rem;resize:vertical}
+.note-edit{width:100%;min-height:60px;padding:0.5rem;border-radius:var(--r);font-size:0.82rem;margin-top:0.5rem;resize:vertical}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
+</style></head>
+<body>
+<div id="app">
+<div id="left">
+<div class="ph"><span>LitManager</span><span style="flex:1"></span><button class="btn btn-o btn-s" onclick="toggleDark()" title="Dark mode">&#x25D1;</button><button class="btn btn-o btn-s" onclick="toggleBatch()" title="Batch import">+B</button></div>
+<div class="stats-bar" id="statsBar"></div>
+<div class="add-bar"><input type="text" id="addUrl" placeholder="Paste DOI or URL..." onkeydown="if(event.key==='Enter')addPaper(event)"><button class="btn btn-p btn-s" onclick="addPaper(event)">Add</button></div>
+<div id="batchPanel" style="display:none;padding:0 0.5rem 0.5rem"><div class="batch-area"><textarea id="batchInput" placeholder="Paste multiple DOIs/URLs, one per line..."></textarea><button class="btn btn-p btn-s" onclick="batchImport()">Import All</button></div></div>
+<div style="padding:0 0.5rem"><input type="text" class="srch" id="searchBox" placeholder="Search papers... (press /)" oninput="renderPapers()"></div>
+<div class="pb" id="paperList"><div class="ec">Loading...</div></div>
+</div>
+<div id="center"><div class="ctb" id="centerToolbar"><span style="color:var(--t2);font-size:0.82rem">Select a paper</span></div><div class="cc" id="centerContent"><div class="ec">Select a paper to view details</div></div></div>
+<div id="right"><div class="ph"><span>AI Chat</span><button class="btn btn-o btn-s" id="askPaperBtn" onclick="askAboutPaper()" style="display:none">Ask Paper</button><button class="btn btn-p btn-s" id="configBtn" onclick="toggleConfig()" style="margin-left:auto">Settings</button></div><div id="configPanel" style="display:none;padding:0.5rem"><div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.35rem"><span style="width:40px;font-size:0.75rem">URL</span><input id="cfgUrl" placeholder="https://api.deepseek.com/v1" style="flex:1;padding:0.3rem 0.5rem;border-radius:4px;font-size:0.75rem"></div><div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.35rem"><span style="width:40px;font-size:0.75rem">Key</span><input type="password" id="cfgKey" placeholder="sk-..." style="flex:1;padding:0.3rem 0.5rem;border-radius:4px;font-size:0.75rem"></div><div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.5rem"><span style="width:40px;font-size:0.75rem">Model</span><input id="cfgModel" value="deepseek-chat" style="flex:1;padding:0.3rem 0.5rem;border-radius:4px;font-size:0.75rem"></div><div style="display:flex;gap:0.35rem"><button class="btn btn-p btn-s" onclick="saveConfig()">Save</button><button class="btn btn-o btn-s" onclick="toggleConfig()">Cancel</button></div></div><div class="chat-msgs" id="chatMessages"><div class="ec">Configure API in Settings</div></div><div class="chat-inp"><textarea id="chatInput" placeholder="Ask anything..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat(event)}"></textarea><button class="btn btn-p btn-s" onclick="sendChat(event)">Send</button></div></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+var PAPERS=[],selectedId=null,chatMsgs=[],cfg={base_url:'',api_key:'',model:'deepseek-chat'};
+
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+function toast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('on');
+  clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('on')},4000);
+}
+
+async function loadPapers(){
+  try{var r=await fetch('/api/papers');PAPERS=await r.json();renderPapers();updateStats()}catch(e){
+    document.getElementById('paperList').innerHTML='<div class="ec" style="color:#ef4444">Failed to load papers: '+e.message+'</div>';
+  }
+}
+
+async function loadConfig(){
+  try{var r=await fetch('/api/config');cfg=await r.json();document.getElementById('cfgUrl').value=cfg.base_url||'';
+    document.getElementById('cfgModel').value=cfg.model||'deepseek-chat';
+    var saved=localStorage.getItem('litmanager_apikey');
+    if(saved){try{cfg.api_key=atob(saved);document.getElementById('cfgKey').value=cfg.api_key}catch(e){}}
+  }catch(e){}
+}
+
+// Dark mode
+function toggleDark(){document.body.classList.toggle('dark');localStorage.setItem('litmanager_dark',document.body.classList.contains('dark')?'1':'0')}
+if(localStorage.getItem('litmanager_dark')==='1')document.body.classList.add('dark');
+
+// Stats bar
+function updateStats(){
+  if(!PAPERS.length){document.getElementById('statsBar').innerHTML='';return}
+  var pdfs=PAPERS.filter(function(p){return p.pdf_downloaded}).length;
+  var years=PAPERS.map(function(p){return parseInt(p.year)||0}).filter(function(y){return y>0});
+  var yr=years.length?Math.min.apply(null,years)+'-'+Math.max.apply(null,years):'N/A';
+  var journals={};PAPERS.forEach(function(p){var j=p.journal||'Unknown';journals[j]=(journals[j]||0)+1});
+  var topJ=Object.keys(journals).sort(function(a,b){return journals[b]-journals[a]}).slice(0,2).join(', ');
+  var tags={};PAPERS.forEach(function(p){(p.tags||[]).forEach(function(t){tags[t]=(tags[t]||0)+1})});
+  var topT=Object.keys(tags).sort(function(a,b){return tags[b]-tags[a]}).slice(0,3).join(', ');
+  document.getElementById('statsBar').innerHTML=pdfs+'/'+PAPERS.length+' PDFs | '+yr+' | '+topJ+' | '+topT;
+}
+
+// Batch import
+function toggleBatch(){var p=document.getElementById('batchPanel');p.style.display=p.style.display==='none'?'block':'none'}
+
+async function batchImport(){
+  var txt=document.getElementById('batchInput').value.trim();if(!txt)return;
+  var urls=txt.split('\n').filter(function(l){return l.trim()});
+  toast('Importing '+urls.length+' papers...');
+  var ok=0,err=0;
+  for(var i=0;i<urls.length;i++){
+    try{
+      var r=await fetch('/api/papers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:urls[i].trim()})});
+      var d=await r.json();if(d.ok)ok++;else err++;
+    }catch(e){err++}
+  }
+  toast('Done: '+ok+' added, '+err+' failed');
+  document.getElementById('batchInput').value='';
+  document.getElementById('batchPanel').style.display='none';
+  await loadPapers();
+}
+
+function renderPapers(){
+  var q=(document.getElementById('searchBox').value||'').toLowerCase();
+  var list=document.getElementById('paperList');
+  if(!list)return;
+  var filtered=PAPERS.filter(function(p){if(!q)return true;var h=[p.title,p.journal,(p.authors||[]).join(' '),(p.tags||[]).join(' '),p.doi||'',p.notes||'',p.abstract||''].join(' ').toLowerCase();return h.indexOf(q)>=0});
+  if(!filtered.length){list.innerHTML='<div class="ec">No papers found</div>';return}
+  var html='';
+  for(var i=0;i<filtered.length;i++){
+    var p=filtered[i];var sel=p.id===selectedId?' sel':'';
+    var authors=(p.authors||[]).slice(0,2).join(', ');if((p.authors||[]).length>2)authors+=' et al.';
+    html+='<div class="pitem'+sel+'" onclick="selectPaper(\''+p.id+'\')">';
+    html+='<div class="tl">'+esc(p.title||'Unknown')+'</div>';
+    html+='<div class="mt"><span>'+esc(authors||'Unknown')+'</span> '+(p.year?'<span>'+p.year+'</span>':'')+'</div>';
+    if((p.tags||[]).length){html+='<div style="margin-top:0.2rem">';
+      for(var j=0;j<p.tags.length;j++)html+='<span class="tag">'+esc(p.tags[j])+'</span>';
+    html+='</div>';}
+    if(p.notes)html+='<div style="font-size:0.68rem;color:var(--t2);margin-top:0.15rem">'+esc(p.notes.substring(0,80))+'</div>';
+    html+='</div>';
+  }
+  list.innerHTML=html;
+}
+
+function getPaper(id){for(var i=0;i<PAPERS.length;i++)if(PAPERS[i].id===id)return PAPERS[i];return null}
+
+function selectPaper(id){
+  selectedId=id;renderPapers();
+  var p=getPaper(id);if(!p)return;
+  var tb=document.getElementById('centerToolbar');
+  tb.innerHTML='<span style="font-weight:600">'+esc(p.title?p.title.substring(0,60)+'...':'')+'</span><span style="flex:1"></span><button class="btn btn-o btn-s" onclick="exportPaper(\''+p.id+'\')">Export</button><button class="btn btn-o btn-s" onclick="deletePaper(\''+p.id+'\')">Delete</button>';
+  var c='<div class="dt">'+esc(p.title)+'</div>';
+  c+='<div class="dm"><b>Authors:</b> '+(p.authors||[]).join(', ')+'<br>';
+  if(p.journal)c+='<b>Journal:</b> '+esc(p.journal);if(p.year)c+=' ('+p.year+')';
+  if(p.volume)c+=' Vol.'+p.volume;if(p.pages)c+=', pp.'+p.pages;c+='<br>';
+  if(p.doi)c+='<b>DOI:</b> <a href="https://doi.org/'+p.doi+'" target="_blank" style="color:var(--a)">'+esc(p.doi)+'</a><br>';
+  if(p.arxiv_id)c+='<b>arXiv:</b> '+esc(p.arxiv_id)+'<br>';
+  c+='<b>Added:</b> '+(p.added||'N/A');
+  if(p.pdf_local)c+='<br><b>Local PDF:</b> <code style="font-size:0.75rem">'+esc(p.pdf_local)+'</code>';
+  c+='</div>';
+  // Tags with edit
+  c+='<div style="margin-bottom:1rem"><b style="font-size:0.82rem">Tags:</b> <div style="display:inline-flex;flex-wrap:wrap;gap:0.2rem;margin-top:0.25rem">';
+  if(p.tags){for(var i=0;i<p.tags.length;i++)c+='<span class="tag">'+esc(p.tags[i])+'<span class="del" onclick="event.stopPropagation();removeTag(\''+p.id+'\',\''+p.tags[i].replace(/'/g,"\\'")+'\')">x</span></span>'}
+  c+='<span class="tag-add" onclick="event.stopPropagation();addTag(\''+p.id+'\')">+ tag</span></div></div>';
+  // Notes
+  c+='<div style="margin-bottom:1rem"><b style="font-size:0.82rem">Notes:</b><br><textarea class="note-edit" id="noteEdit" placeholder="Add notes about this paper...">'+esc(p.notes||'')+'</textarea><button class="btn btn-p btn-s" style="margin-top:0.25rem" onclick="saveNotes(\''+p.id+'\')">Save Notes</button></div>';
+  // Actions
+  c+='<div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1rem">';
+  if(p.pdf_downloaded)c+='<button class="btn btn-p btn-s" onclick="showPdf(\''+p.id+'\')">Preview PDF</button>';
+  c+='<button class="btn btn-p btn-s" onclick="downloadPdf(event,\''+p.id+'\',\''+(p.pdf_url||'').replace(/'/g,"\\'")+'\')">'+(p.pdf_downloaded?'Re-download':'Download PDF')+'</button>';
+  c+='<button class="btn btn-o btn-s" onclick="copyBibtex(\''+p.id+'\')">Copy BibTeX</button>';
+  if(p.url)c+='<a class="btn btn-o btn-s" href="'+p.url+'" target="_blank">Source</a>';
+  c+='</div>';
+  if(p.abstract)c+='<div class="da">'+esc(p.abstract)+'</div>';
+  if(p.bibtex)c+='<div style="margin-bottom:1.2rem"><h3 style="font-size:0.75rem;color:var(--t2);text-transform:uppercase;margin-bottom:0.4rem">BibTeX</h3><div class="bb">'+esc(p.bibtex)+'</div></div>';
+  if(p.pdf_downloaded)c+='<div style="margin-bottom:1.2rem"><h3 style="font-size:0.75rem;color:var(--t2);text-transform:uppercase;margin-bottom:0.4rem">PDF Preview</h3><iframe class="pdf-frame" src="/api/pdf/'+p.id+'" style="width:100%;height:600px;border:none;background:#fff"></iframe></div>';
+  document.getElementById('centerContent').innerHTML=c;
+  document.getElementById('askPaperBtn').style.display='inline-flex';
+}
+
+async function addTag(id){var t=prompt('Enter new tag:');if(!t)return;var p=getPaper(id);if(!p)return;var tags=(p.tags||[]).slice();tags.push(t);await updatePaper(id,{tags:tags})}
+async function removeTag(id,tag){var p=getPaper(id);if(!p)return;var tags=(p.tags||[]).filter(function(x){return x!==tag});await updatePaper(id,{tags:tags})}
+async function saveNotes(id){var notes=document.getElementById('noteEdit').value;await updatePaper(id,{notes:notes})}
+async function updatePaper(id,fields){fields.id=id;try{var r=await fetch('/api/papers/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(fields)});var d=await r.json();if(d.ok){await loadPapers();selectPaper(id);toast('Updated')}else toast('Error: '+d.error)}catch(e){toast('Failed: '+e.message)}}
+
+async function downloadPdf(e,id,pdfUrl){
+  var btn=e?e.target:event?event.target:document.querySelector('#centerContent .btn-p');if(!pdfUrl){toast('No PDF URL');return}
+  var orig=btn.innerHTML;btn.disabled=true;btn.innerHTML='<span class="spin" style="border-top-color:var(--a);border-color:rgba(0,0,0,.15)"></span>';
+  try{var r=await fetch(pdfUrl,{credentials:'include'});if(r.ok){var blob=await r.blob();var fd=new FormData();fd.append('pdf',blob,id+'.pdf');var sr=await fetch('/api/save-pdf?id='+id,{method:'POST',body:fd});var sd=await sr.json();if(sd.ok){toast('Saved to pdfs/ ('+(sd.size/1024).toFixed(0)+' KB)');await loadPapers();selectPaper(id);btn.disabled=false;btn.innerHTML=orig;return}throw new Error(sd.error)}throw new Error('HTTP '+r.status)}catch(e1){toast('Trying server fetch...');
+  try{var r2=await fetch('/api/fetch-and-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:pdfUrl,id:id})});var d2=await r2.json();if(d2.ok){toast('Saved to pdfs/ ('+(d2.size/1024).toFixed(0)+' KB)');await loadPapers();selectPaper(id)}else throw new Error(d2.error)}catch(e2){
+    toast('Opening save dialog...');fetch('/api/proxy-download?url='+encodeURIComponent(pdfUrl)+'&id='+id).then(function(r){if(r.ok)return r.blob()}).then(function(blob){if(blob){var u=URL.createObjectURL(blob);var a=document.createElement('a');a.href=u;a.download=id+'.pdf';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);toast('Download started')}else{window.open(pdfUrl,'_blank')}}).catch(function(){window.open(pdfUrl,'_blank')})
+  }}btn.disabled=false;btn.innerHTML=orig;
+}
+
+function showPdf(id){document.getElementById('centerContent').innerHTML='<div style="margin-bottom:1.2rem"><h3 style="font-size:0.75rem;color:var(--t2);text-transform:uppercase;margin-bottom:0.4rem">PDF Preview</h3><div style="margin-bottom:0.5rem"><button class="btn btn-o btn-s" onclick="selectPaper(\''+id+'\')">Back to Details</button></div><iframe class="pdf-frame" src="/api/pdf/'+id+'" style="width:100%;height:600px;border:none;background:#fff"></iframe></div>'}
+
+async function addPaper(e){
+  var inp=document.getElementById('addUrl');var url=inp.value.trim();if(!url){toast('Paste a URL first');return}
+  inp.value='';var btn=e?e.target:document.querySelector('#left .btn-p');var orig=btn.innerHTML;btn.disabled=true;btn.innerHTML='<span class="spin"></span>';toast('Fetching paper metadata...');
+  try{var r=await fetch('/api/papers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url})});var d=await r.json();if(d.ok){await loadPapers();selectPaper(d.paper.id);toast(d.added?'Paper added!':'Paper already in library')}else toast('Error: '+d.error)}catch(e){toast('Failed: '+e.message)}
+  btn.disabled=false;btn.innerHTML=orig;updateStats();
+}
+
+async function deletePaper(id){if(!confirm('Delete this paper?'))return;
+  try{var r=await fetch('/api/papers/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})});var d=await r.json();if(d.ok){if(selectedId===id)selectedId=null;document.getElementById('centerContent').innerHTML='<div class="ec">Select a paper to view details</div>';document.getElementById('centerToolbar').innerHTML='<span style="color:var(--t2);font-size:0.82rem">Select a paper</span>';document.getElementById('askPaperBtn').style.display='none';await loadPapers();updateStats();toast('Paper deleted')}else toast('Error: '+d.error)}catch(e){toast('Failed: '+e.message)}
+}
+
+function copyBibtex(id){var p=getPaper(id);if(!p||!p.bibtex){toast('No BibTeX');return}navigator.clipboard.writeText(p.bibtex).then(function(){toast('BibTeX copied!')})}
+
+function exportPaper(id){var p=getPaper(id);if(!p)return;var j=JSON.stringify(p,null,2);var b=new Blob([j],{type:'application/json'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download=p.id+'.json';a.click();URL.revokeObjectURL(u);toast('Exported '+p.id+'.json')}
+
+function exportAllBibtex(){var all=PAPERS.filter(function(p){return p.bibtex}).map(function(p){return p.bibtex}).join('\n\n');if(!all){toast('No entries');return}var b=new Blob([all],{type:'text/plain'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='papers.bib';a.click();URL.revokeObjectURL(u);toast('Exported BibTeX')}
+
+function exportAllJson(){var j=JSON.stringify({papers:PAPERS},null,2);var b=new Blob([j],{type:'application/json'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='papers.json';a.click();URL.revokeObjectURL(u);toast('Exported papers.json')}
+
+function downloadAllPdfs(){var missing=PAPERS.filter(function(p){return!p.pdf_downloaded&&p.pdf_url});if(!missing.length){toast('All PDFs downloaded');return}toast('Downloading '+missing.length+' PDFs...');missing.forEach(function(p,i){setTimeout(function(){var a=document.createElement('a');a.href='/api/proxy-download?url='+encodeURIComponent(p.pdf_url)+'&id='+p.id;a.click();if(i===missing.length-1){setTimeout(function(){loadPapers();updateStats()},3000)}},i*1000)})}
+
+function renderChat(){
+  var c=document.getElementById('chatMessages');if(!chatMsgs.length){c.innerHTML='<div class="ec">'+(cfg.api_key?'Ask anything about papers':'Configure API in Settings')+'</div>';return}
+  c.innerHTML='';for(var i=0;i<chatMsgs.length;i++){var m=chatMsgs[i];var d=document.createElement('div');d.className='msg '+(m.role==='user'?'u':'a');d.innerHTML=m.role==='assistant'?renderMd(m.content):esc(m.content);c.appendChild(d)}c.scrollTop=c.scrollHeight;
+}
+
+function renderMd(txt){var s=esc(txt);s=s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');s=s.replace(/\*(.+?)\*/g,'<em>$1</em>');s=s.replace(/`([^`]+)`/g,'<code>$1</code>');s=s.replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>');s=s.replace(/\n/g,'<br>');return s}
+
+async function sendChat(e){var inp=document.getElementById('chatInput');var msg=inp.value.trim();if(!msg)return;if(!cfg.api_key){toast('Configure API in Settings first');toggleConfig();return}inp.value='';chatMsgs.push({role:'user',content:msg});renderChat();var btn=e?e.target:document.querySelector('#right .btn-p');var orig=btn.innerHTML;btn.disabled=true;btn.innerHTML='<span class="spin"></span>';
+try{var r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMsgs})});var d=await r.json();if(d.ok&&d.message){chatMsgs.push(d.message);renderChat()}else{chatMsgs.push({role:'assistant',content:'Error: '+(d.error||'Unknown')});renderChat()}}catch(e){chatMsgs.push({role:'assistant',content:'Network error: '+e.message});renderChat()}btn.disabled=false;btn.innerHTML=orig}
+
+function askAboutPaper(){if(!selectedId)return;var p=getPaper(selectedId);if(!p)return;if(!cfg.api_key){toast('Configure API in Settings first');toggleConfig();return}var ctx='I want to discuss this paper:\n\nTitle: '+p.title+'\nAuthors: '+(p.authors||[]).join(', ')+'\nJournal: '+(p.journal||'')+'\nYear: '+(p.year||'')+'\nDOI: '+(p.doi||'')+'\nAbstract: '+(p.abstract||'N/A');if(p.notes)ctx+='\nMy notes: '+p.notes;chatMsgs.push({role:'user',content:ctx});renderChat();document.getElementById('chatInput').focus();document.getElementById('chatMessages').scrollTop=document.getElementById('chatMessages').scrollHeight}
+
+function toggleConfig(){var p=document.getElementById('configPanel');if(p.style.display==='none'){p.style.display='block';document.getElementById('cfgUrl').value=cfg.base_url||'';document.getElementById('cfgKey').value=cfg.api_key||'';document.getElementById('cfgModel').value=cfg.model||'deepseek-chat'}else p.style.display='none'}
+
+async function saveConfig(){var base_url=document.getElementById('cfgUrl').value.trim();var api_key=document.getElementById('cfgKey').value.trim();var model=document.getElementById('cfgModel').value.trim()||'deepseek-chat';
+try{var r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base_url:base_url,api_key:api_key,model:model})});var d=await r.json();if(d.ok){cfg=d.config;cfg.api_key=api_key;localStorage.setItem('litmanager_apikey',btoa(api_key));document.getElementById('configPanel').style.display='none';toast('API config saved')}else toast('Error: '+d.error)}catch(e){toast('Failed: '+e.message)}}
+
+// Keyboard shortcuts
+document.addEventListener('keydown',function(e){
+  if(e.key==='/'&&document.activeElement===document.body){e.preventDefault();document.getElementById('searchBox').focus()}
+});
+
+loadPapers();loadConfig();renderChat();updateStats();
+</script>
+</body></html>
