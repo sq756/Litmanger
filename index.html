@@ -115,6 +115,7 @@ input:focus,textarea:focus{border-color:var(--a)}
 	<div class="menu-item" onclick="selectPdfFolder();toggleMenu()">Select PDFs Folder</div>
 <div style="border-top:1px solid var(--b)"></div>
 <div class="menu-item" onclick="if(confirm('Refresh?')){loadPapers();updateStats()};toggleMenu()">Refresh</div>
+	<div class="menu-item" onclick="if(confirm('Quit Litmanger? This will close the server.')){quitServer()};toggleMenu()" style="color:#ef4444">Quit</div>
 </div></div>
 <button class="btn btn-o btn-s" onclick="toggleDark()" title="Dark mode">&#x25D1;</button>
 <button class="btn btn-o btn-s" onclick="toggleTheme()" title="Theme">&#x1F3A8;</button>
@@ -214,6 +215,7 @@ async function enterApp(){
   localStorage.setItem('litmanger_entered','1');
 }
 
+function quitServer(){fetch('/api/quit',{method:'POST'});toast('Shutting down...');setTimeout(function(){document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;font-size:1.2rem;color:var(--t2);background:var(--bg)">Litmanger stopped. You can close this tab.</div>'},500)}
 // ── Logo refresh ──
 async function refreshApp(){
   var icon=document.getElementById('logoIcon');
