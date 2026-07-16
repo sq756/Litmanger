@@ -1,31 +1,34 @@
 @echo off
 cd /d "%~dp0"
 
+:: Detect Python
 set "PYTHON="
 for %%c in (python python3 py) do (
     where %%c >nul 2>nul
     if not errorlevel 1 (
         set "PYTHON=%%c"
-        goto :found
+        goto :pyfound
     )
 )
 
-echo [ERROR] Python not found on your system.
+:: No Python - try standalone exe
+if exist "Litmanger.exe" (
+    echo Starting Litmanger...
+    start "" "Litmanger.exe"
+    start http://127.0.0.1:8766
+    goto :end
+)
+
+echo [ERROR] Python not found.
 echo.
-echo Please install Python 3.9+ from https://www.python.org/downloads/
-echo Make sure to check "Add Python to PATH" during installation.
+echo Option 1: Install Python 3.9+ from https://www.python.org/downloads/
+echo Option 2: Download the standalone exe from the GitHub releases page
 echo.
 goto :end
 
-:found
-echo Litmanger -- starting...
+:pyfound
+echo Litmanger starting...
 echo.
-
-%PYTHON% -m litmanger server 2>nul && goto :end
-%PYTHON% server.py 2>nul && goto :end
-
-echo [ERROR] Failed to start. Check that you are in the Litmanger directory.
-echo If downloaded as ZIP, make sure to extract all files first.
+%PYTHON% server.py
 
 :end
-pause

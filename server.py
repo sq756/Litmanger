@@ -7,6 +7,7 @@ import json
 import os
 import re
 import ssl
+import sys
 import threading
 import urllib.error
 import urllib.parse
@@ -14,7 +15,12 @@ import urllib.request
 from datetime import date
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).parent.resolve()
+# When bundled by PyInstaller, use the exe's directory instead of __file__
+if getattr(sys, "frozen", False):
+    SCRIPT_DIR = Path(sys.executable).parent.resolve()
+    # Data files for frozen builds are also in this directory (copied by build script)
+else:
+    SCRIPT_DIR = Path(__file__).parent.resolve()
 DB_PATH = SCRIPT_DIR / "papers.json"
 CONFIG_PATH = SCRIPT_DIR / "config.json"
 PDF_DIR = SCRIPT_DIR / "pdfs"
@@ -587,9 +593,22 @@ class Handler(http.server.BaseHTTPRequestHandler):
 def main():
     server = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
     server.allow_reuse_address = True
-    print(f"LitManager running at http://127.0.0.1:{PORT}")
-    print(f"PDF directory: {PDF_DIR}")
-    print("Press Ctrl+C to stop")
+    url = f"http://127.0.0.1:{PORT}"
+    print(f"")
+    print(f"  ============================================")
+    print(f"   LitManager  |  {url}")
+    print(f"   PDFs: {PDF_DIR}")
+    print(f"   Press Ctrl+C to stop")
+    print(f"  ============================================")
+    print(f"")
+
+    # Auto-open browser
+    import webbrowser
+    try:
+        webbrowser.open(url)
+    except Exception:
+        pass
+
     try:
         server.serve_forever()
     except KeyboardInterrupt:

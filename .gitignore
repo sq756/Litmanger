@@ -16,3 +16,9 @@ Thumbs.db
 
 # Output logs
 *.txt
+
+# Build output
+dist/
+build/
+*.spec
+*.exe
