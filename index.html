@@ -193,9 +193,11 @@ function toast(msg){
   clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('on')},4000);
 }
 
-async function loadPapers(){
+async function loadPapers(retries){
+  if(retries===undefined)retries=0;
   try{var r=await fetch('/api/papers');PAPERS=await r.json();renderPapers();updateStats()}catch(e){
-    document.getElementById('paperList').innerHTML='<div class="ec" style="color:#ef4444">Failed to load papers: '+e.message+'</div>';
+    if(retries<5){console.log('loadPapers retry '+(retries+1)+'...');setTimeout(function(){loadPapers(retries+1)},500*(retries+1))}
+    else{document.getElementById('paperList').innerHTML='<div class="ec" style="color:#ef4444">Failed to load papers. <a href="#" onclick="loadPapers(0);return false" style="color:var(--a)">Retry</a></div>'}
   }
 }
 
