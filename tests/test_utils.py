@@ -1,7 +1,5 @@
 """Tests for litmanger.utils — DOI, path safety, meta extraction."""
 
-from pathlib import Path
-
 from litmanger.utils import (
     extract_doi,
     extract_meta_name,

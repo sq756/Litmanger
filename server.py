@@ -254,7 +254,8 @@ def collect_paper(url):
     if bibtex:
         for fld, key in [("volume", "volume"), ("number", "issue"), ("pages", "pages")]:
             m = re.search(rf"{fld}\s*=\s*\{{([^}}]+)\}}", bibtex)
-            if m: paper[key] = m.group(1)
+            if m:
+                paper[key] = m.group(1)
 
     return paper, None
 
@@ -1105,8 +1106,10 @@ fetch(url+'/api/papers').then(function(r){{return r.json()}}).then(function(p){{
                     # Sort smartly
                     def _score(mid):
                         s = mid.lower()
-                        if "chat" in s or "instruct" in s: return 0
-                        if "completion" in s or "gpt" in s or "claude" in s or "deepseek" in s or "qwen" in s: return 1
+                        if "chat" in s or "instruct" in s:
+                            return 0
+                        if "completion" in s or "gpt" in s or "claude" in s or "deepseek" in s or "qwen" in s:
+                            return 1
                         return 2
                     models.sort(key=_score)
                     self._json({"ok": True, "models": models, "from_api": from_api})

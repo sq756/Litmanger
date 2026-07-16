@@ -1,7 +1,5 @@
 """Tests for litmanger.models — Paper, PaperDB."""
 
-import json
-
 from litmanger.models import Paper, PaperDB
 
 
