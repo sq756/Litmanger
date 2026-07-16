@@ -609,7 +609,19 @@ document.getElementById('tOpacity').addEventListener('input',function(){saveBgSe
 document.getElementById('tBlur').addEventListener('input',function(){saveBgSettings()});
 var _origToggleDark=toggleDark;
 toggleDark=function(){_origToggleDark();applyTheme()};
-(function(){applyTheme();renderThemePresets();loadBgSettings()})();
+
+	// === Init — wait for DOM + external scripts (KaTeX CDN) ===
+	document.addEventListener('DOMContentLoaded', function() {
+	  applyTheme();
+	  renderThemePresets();
+	  loadBgSettings();
+	  if(localStorage.getItem('litmanager_dark')==='1')document.body.classList.add('dark');
+	  loadPapers();
+	  loadConfig();
+	  renderChat();
+	  updateStats();
+	  localStorage.setItem('litmanager_server',window.location.origin);
+	});
 
 // === Drag handles ===
 (function(){
@@ -623,8 +635,5 @@ toggleDark=function(){_origToggleDark();applyTheme()};
   document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);
 })();
 document.addEventListener('keydown',function(e){if(e.key==='/'&&document.activeElement===document.body){e.preventDefault();document.getElementById('searchBox').focus()}});
-loadPapers();loadConfig();renderChat();updateStats();
-// Save server origin for bookmarklet/Tampermonkey
-localStorage.setItem('litmanager_server',window.location.origin);
 </script>
 </body></html>
