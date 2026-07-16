@@ -3,6 +3,7 @@
 <style>
 :root{--bg:#f0f1f5;--p:#fff;--t:#1a1a2e;--t2:#666;--a:#4f46e5;--a2:#7c3aed;--b:#e2e4e9;--h:#f5f5fa;--r:6px}
 .dark{--bg:#1a1a2e;--p:#252540;--t:#e0e0e8;--t2:#999;--a:#818cf8;--a2:#a78bfa;--b:#3a3a55;--h:#2a2a45}
+html{visibility:hidden}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--t);height:100vh;overflow:hidden;user-select:none}
 #app{display:flex;height:100vh}
@@ -632,6 +633,8 @@ toggleDark=function(){_origToggleDark();applyTheme()};
 	  renderChat();
 	  updateStats();
 	  localStorage.setItem('litmanager_server',window.location.origin);
+	  // Show page once DOM + theme + data are ready (prevents flash of blank content)
+	  document.documentElement.style.visibility='visible';
 	});
 
 // === Drag handles ===
