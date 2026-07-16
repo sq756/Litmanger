@@ -23,6 +23,7 @@ else:
     SCRIPT_DIR = Path(__file__).parent.resolve()
 DB_PATH = SCRIPT_DIR / "papers.json"
 CONFIG_PATH = SCRIPT_DIR / "config.json"
+COMMENTS_PATH = SCRIPT_DIR / "comments.json"
 PDF_DIR = SCRIPT_DIR / "pdfs"
 PDF_DIR.mkdir(exist_ok=True)
 PORT = 8766
@@ -242,6 +243,18 @@ def mark_downloaded(paper_id, local_path=None):
     return False
 
 
+def load_comments():
+    if COMMENTS_PATH.exists():
+        with open(COMMENTS_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+
+def save_comments(comments):
+    with open(COMMENTS_PATH, "w", encoding="utf-8") as f:
+        json.dump(comments, f, indent=2, ensure_ascii=False)
+
+
 def generate_html_page(db):
     """Generate a static HTML page for offline browsing / sharing."""
     papers = db["papers"]
@@ -386,8 +399,25 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
             m = re.match(r"/api/pdf/(.+)", p.path)
             if m:
-                fp = PDF_DIR / f"{m.group(1)}.pdf"
-                if fp.exists():
+                clean_id = m.group(1)
+                # Try exact match first
+                fp = PDF_DIR / f"{clean_id}.pdf"
+                if not fp.exists():
+                    # Try papers.json to find the actual local path
+                    db_papers = load_db()
+                    for paper in db_papers["papers"]:
+                        if paper.get("id") == clean_id and paper.get("pdf_local"):
+                            fp = Path(paper["pdf_local"])
+                            if fp.exists():
+                                break
+                    else:
+                        # Last resort: find any PDF starting with this ID
+                        candidates = sorted(
+                            PDF_DIR.glob(f"{clean_id}*.pdf"),
+                            key=lambda x: x.stat().st_mtime, reverse=True,
+                        )
+                        fp = candidates[0] if candidates else None
+                if fp and fp.exists():
                     self.send_response(200)
                     self.send_header("Content-Type", "application/pdf")
                     self.send_header(
@@ -399,6 +429,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         self.wfile.write(f.read())
                 else:
                     self._json({"error": "PDF not found"}, 404)
+                return
+
+            # --- /api/comments ---
+            if p.path == "/api/comments":
+                doi = qs.get("doi", [None])[0]
+                comments = load_comments()
+                self._json(comments.get(doi, []))
                 return
 
             # Serve index.html for everything else
@@ -643,13 +680,22 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     for p in db["papers"]:
                         if p.get("id") == pid:
                             p["pdf_downloaded"] = True
-                            # Check if user placed a PDF manually in pdfs/
+                            # Find any PDF starting with this ID, prefer exact match
                             candidates = sorted(
-                                [fp for fp in PDF_DIR.glob(f"{pid}*") if fp.suffix.lower() == ".pdf"],
-                                key=lambda x: x.stat().st_mtime, reverse=True,
+                                [fp for fp in PDF_DIR.glob(f"{pid}*.pdf") if fp.is_file()],
+                                key=lambda x: (x.name != f"{pid}.pdf", -x.stat().st_mtime),
                             )
                             if candidates:
-                                p["pdf_local"] = str(candidates[0])
+                                best = candidates[0]
+                                # Normalize: rename 'fq4j-2p2l (1).pdf' -> 'fq4j-2p2l.pdf'
+                                normalized = PDF_DIR / f"{pid}.pdf"
+                                if best != normalized:
+                                    try:
+                                        best.replace(normalized)
+                                        best = normalized
+                                    except OSError:
+                                        pass  # keep original name if rename fails
+                                p["pdf_local"] = str(best)
                             save_db(db)
                             self._json({"ok": True, "paper": p})
                             return
@@ -683,6 +729,32 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     with open(html_path, "w", encoding="utf-8") as f:
                         f.write(html)
                     self._json({"ok": True, "path": str(html_path.name)})
+                except Exception as e:
+                    self._json({"ok": False, "error": str(e)}, 500)
+                return
+
+            # --- /api/comments ---
+            if parsed.path == "/api/comments":
+                try:
+                    d = json.loads(body.decode("utf-8"))
+                    doi = d.get("doi", "").strip()
+                    author = d.get("author", "").strip() or "Anonymous"
+                    text = d.get("text", "").strip()
+                    if not doi or not text:
+                        self._json({"ok": False, "error": "Need doi and text"}, 400)
+                        return
+                    comments = load_comments()
+                    existing = comments.get(doi, [])
+                    next_id = str(len(existing) + 1)
+                    entry = {
+                        "id": next_id,
+                        "author": author,
+                        "text": text,
+                        "time": date.today().isoformat(),
+                    }
+                    comments[doi] = existing + [entry]
+                    save_comments(comments)
+                    self._json({"ok": True, "comments": comments[doi]})
                 except Exception as e:
                     self._json({"ok": False, "error": str(e)}, 500)
                 return

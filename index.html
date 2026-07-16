@@ -1,75 +1,112 @@
 <!DOCTYPE html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>LitManager</title>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>LitManager</title>
 <style>
 :root{--bg:#f0f1f5;--p:#fff;--t:#1a1a2e;--t2:#666;--a:#4f46e5;--a2:#7c3aed;--b:#e2e4e9;--h:#f5f5fa;--r:6px}
 .dark{--bg:#1a1a2e;--p:#252540;--t:#e0e0e8;--t2:#999;--a:#818cf8;--a2:#a78bfa;--b:#3a3a55;--h:#2a2a45}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--t);height:100vh;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--t);height:100vh;overflow:hidden;user-select:none}
 #app{display:flex;height:100vh}
-#left{width:340px;min-width:220px;max-width:50vw;background:var(--p);border-right:1px solid var(--b);display:flex;flex-direction:column;overflow:auto;resize:horizontal}
+#left{width:320px;min-width:200px;background:var(--p);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
 #center{flex:1;min-width:280px;background:var(--p);display:flex;flex-direction:column;overflow:hidden}
-#right{width:380px;min-width:220px;max-width:50vw;background:var(--p);border-left:1px solid var(--b);display:flex;flex-direction:column;overflow:auto;resize:horizontal}
-.ph{padding:0.75rem 1rem;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:0.5rem;font-weight:600;font-size:0.85rem;min-height:48px;flex-shrink:0}
-.pb{flex:1;overflow-y:auto;padding:0.5rem}
-.btn{padding:0.4rem 0.75rem;border:none;border-radius:var(--r);font-size:0.78rem;cursor:pointer;font-weight:500;transition:all 0.15s;white-space:nowrap;display:inline-flex;align-items:center;gap:0.3rem}
+#right{width:380px;min-width:200px;background:var(--p);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.grip{width:4px;cursor:col-resize;flex-shrink:0;background:transparent;transition:background .15s}.grip:hover,.grip.on{background:var(--a)}
+.ph{padding:.75rem 1rem;border-bottom:1px solid var(--b);display:flex;align-items:center;gap:.5rem;font-weight:600;font-size:.85rem;min-height:48px;flex-shrink:0}
+.pb{flex:1;overflow-y:auto;padding:.5rem}
+.btn{padding:.4rem .75rem;border:none;border-radius:var(--r);font-size:.78rem;cursor:pointer;font-weight:500;transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:.3rem}
 .btn-p{background:var(--a);color:#fff}.btn-p:hover{background:var(--a2)}
 .btn-o{background:transparent;color:var(--a);border:1px solid var(--b)}.btn-o:hover{background:var(--h)}
-.btn-s{padding:0.25rem 0.5rem;font-size:0.72rem}
+.btn-s{padding:.25rem .5rem;font-size:.72rem}
 input,textarea{font-family:inherit;outline:none;background:var(--p);color:var(--t);border:1px solid var(--b)}
 input:focus,textarea:focus{border-color:var(--a)}
-.srch{width:100%;padding:0.5rem 0.75rem;border-radius:var(--r);font-size:0.82rem;background:var(--bg)}
-.add-bar{display:flex;gap:0.35rem;padding:0.5rem}
-.add-bar input{flex:1;padding:0.4rem 0.6rem;border-radius:var(--r);font-size:0.78rem}
-.pitem{padding:0.6rem 0.75rem;border-radius:var(--r);cursor:pointer;transition:background 0.12s;border:1px solid transparent;margin-bottom:2px}
+.srch{width:100%;padding:.5rem .75rem;border-radius:var(--r);font-size:.82rem;background:var(--bg)}
+.add-bar{display:flex;gap:.35rem;padding:.5rem}
+.add-bar input{flex:1;padding:.4rem .6rem;border-radius:var(--r);font-size:.78rem}
+.pitem{padding:.6rem .75rem;border-radius:var(--r);cursor:pointer;transition:background .12s;border:1px solid transparent;margin-bottom:2px}
 .pitem:hover{background:var(--h)}.pitem.sel{background:#eef2ff;border-color:var(--a)}
 .dark .pitem.sel{background:#2a2a55}
-.pitem .tl{font-size:0.82rem;font-weight:600;line-height:1.35;margin-bottom:0.2rem}
-.pitem .mt{font-size:0.7rem;color:var(--t2)}
-.tag{display:inline-block;padding:0.1rem 0.4rem;border-radius:10px;font-size:0.65rem;background:#eef2ff;color:var(--a);margin-right:0.2rem;cursor:pointer}
+.pitem .tl{font-size:.82rem;font-weight:600;line-height:1.35;margin-bottom:.2rem}
+.pitem .mt{font-size:.7rem;color:var(--t2)}
+.tag{display:inline-block;padding:.1rem .4rem;border-radius:10px;font-size:.65rem;background:#eef2ff;color:var(--a);margin-right:.2rem;cursor:pointer}
 .dark .tag{background:#3a3a60}
-.tag .del{margin-left:3px;opacity:0.5;font-weight:700}.tag .del:hover{opacity:1;color:#ef4444}
-.tag-add{display:inline-block;padding:0.1rem 0.4rem;border-radius:10px;font-size:0.65rem;border:1px dashed var(--b);color:var(--t2);cursor:pointer;margin-right:0.2rem}
-.ctb{display:flex;align-items:center;gap:0.5rem;padding:0.5rem 1rem;border-bottom:1px solid var(--b);min-height:40px;flex-shrink:0}
+.tag .del{margin-left:3px;opacity:.5;font-weight:700}.tag .del:hover{opacity:1;color:#ef4444}
+.tag-add{display:inline-block;padding:.1rem .4rem;border-radius:10px;font-size:.65rem;border:1px dashed var(--b);color:var(--t2);cursor:pointer;margin-right:.2rem}
+.ctb{display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem;border-bottom:1px solid var(--b);min-height:40px;flex-shrink:0}
 .cc{flex:1;overflow-y:auto;padding:1.5rem}
-.dt{font-size:1.3rem;font-weight:700;line-height:1.4;margin-bottom:0.5rem}
-.dm{font-size:0.85rem;color:var(--t2);margin-bottom:1rem;line-height:1.6}
-.da{font-size:0.9rem;line-height:1.7;color:var(--t);margin-bottom:1.5rem;white-space:pre-wrap}
-.bb{background:var(--bg);border-radius:var(--r);padding:0.75rem;font-family:monospace;font-size:0.75rem;white-space:pre-wrap;overflow-x:auto;max-height:200px;overflow-y:auto}
-.ec{display:flex;align-items:center;justify-content:center;height:100%;color:var(--t2);font-size:0.9rem;flex-direction:column;gap:0.5rem}
-.chat-msgs{flex:1;overflow-y:auto;padding:0.75rem;display:flex;flex-direction:column;gap:0.5rem}
-.msg{max-width:90%;padding:0.5rem 0.75rem;border-radius:var(--r);font-size:0.82rem;line-height:1.55;word-break:break-word}
+.dt{font-size:1.3rem;font-weight:700;line-height:1.4;margin-bottom:.5rem}
+.dm{font-size:.85rem;color:var(--t2);margin-bottom:1rem;line-height:1.6}
+.da{font-size:.9rem;line-height:1.7;color:var(--t);margin-bottom:1.5rem;white-space:pre-wrap}
+.bb{background:var(--bg);border-radius:var(--r);padding:.75rem;font-family:monospace;font-size:.75rem;white-space:pre-wrap;overflow-x:auto;max-height:200px;overflow-y:auto}
+.ec{display:flex;align-items:center;justify-content:center;height:100%;color:var(--t2);font-size:.9rem;flex-direction:column;gap:.5rem}
+.chat-msgs{flex:1;overflow-y:auto;padding:.75rem;display:flex;flex-direction:column;gap:.5rem}
+.msg{max-width:90%;padding:.5rem .75rem;border-radius:var(--r);font-size:.82rem;line-height:1.55;word-break:break-word}
 .msg.u{align-self:flex-end;background:var(--a);color:#fff}
 .msg.a{align-self:flex-start;background:var(--bg);color:var(--t)}
 .dark .msg.a{background:#3a3a55}
-.chat-inp{padding:0.5rem;border-top:1px solid var(--b);flex-shrink:0;display:flex;gap:0.35rem}
-.chat-inp textarea{flex:1;resize:none;padding:0.5rem;border-radius:var(--r);font-size:0.82rem;min-height:36px;max-height:100px}
+.chat-inp{padding:.5rem;border-top:1px solid var(--b);flex-shrink:0;display:flex;gap:.35rem}
+.chat-inp textarea{flex:1;resize:none;padding:.5rem;border-radius:var(--r);font-size:.82rem;min-height:36px;max-height:100px}
 .spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .5s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#1a1a2e;color:#fff;padding:0.7rem 1.2rem;border-radius:6px;font-size:0.85rem;z-index:9999;opacity:0;transform:translateY(8px);transition:all 0.25s;max-width:360px}
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#1a1a2e;color:#fff;padding:.7rem 1.2rem;border-radius:6px;font-size:.85rem;z-index:9999;opacity:0;transform:translateY(8px);transition:all .25s;max-width:360px}
 .toast.on{opacity:1;transform:translateY(0)}
-.stats-bar{display:flex;gap:1.5rem;padding:0.4rem 0.75rem;font-size:0.7rem;color:var(--t2);border-bottom:1px solid var(--b);flex-shrink:0;overflow-x:auto}
-.batch-area{display:flex;flex-direction:column;gap:0.35rem;padding:0.5rem}
-.batch-area textarea{width:100%;min-height:80px;padding:0.5rem;border-radius:var(--r);font-size:0.75rem;resize:vertical}
-.note-edit{width:100%;min-height:60px;padding:0.5rem;border-radius:var(--r);font-size:0.82rem;margin-top:0.5rem;resize:vertical}
+.stats-bar{display:flex;gap:1.5rem;padding:.4rem .75rem;font-size:.7rem;color:var(--t2);border-bottom:1px solid var(--b);flex-shrink:0;overflow-x:auto}
+.batch-area{display:flex;flex-direction:column;gap:.35rem;padding:.5rem}
+.batch-area textarea{width:100%;min-height:80px;padding:.5rem;border-radius:var(--r);font-size:.75rem;resize:vertical}
+.note-edit{width:100%;min-height:60px;padding:.5rem;border-radius:var(--r);font-size:.82rem;margin-top:.5rem;resize:vertical}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
-.menu-item{padding:0.5rem 0.75rem;font-size:0.78rem;cursor:pointer;white-space:nowrap;transition:background 0.12s}.menu-item:hover{background:var(--h)}
+.menu-item{padding:.5rem .75rem;font-size:.78rem;cursor:pointer;white-space:nowrap;transition:background .12s}.menu-item:hover{background:var(--h)}
+.cmt-section{border-top:1px solid var(--b);flex-shrink:0;max-height:40%;display:flex;flex-direction:column}
+.cmt-header{padding:.5rem .75rem;font-size:.75rem;font-weight:600;color:var(--t2);cursor:pointer;display:flex;align-items:center;gap:.35rem;flex-shrink:0}
+.cmt-list{flex:1;overflow-y:auto;padding:.5rem .75rem;font-size:.78rem}
+.cmt{background:var(--bg);border-radius:var(--r);padding:.4rem .6rem;margin-bottom:.35rem;line-height:1.4}
+.cmt .cmt-author{font-weight:600;font-size:.72rem;color:var(--a)}
+.cmt .cmt-time{font-size:.65rem;color:var(--t2);margin-left:.4rem}
+.cmt .cmt-text{font-size:.76rem;margin-top:.15rem}
+.cmt-inp{display:flex;gap:.25rem;padding:.35rem .5rem;border-top:1px solid var(--b);flex-shrink:0}
+.cmt-inp input{flex:1;padding:.3rem .4rem;border-radius:var(--r);font-size:.72rem}
+.cmt-inp .name-inp{width:80px;flex:none}
 </style></head>
 <body>
 <div id="app">
 <div id="left">
-<div class="ph"><span>LitManager</span><span style="flex:1"></span><div class="menu-wrap" style="position:relative"><button class="btn btn-o btn-s" onclick="toggleMenu(event)">Menu</button><div class="menu-drop" id="menuDrop" style="display:none;position:absolute;top:100%;right:0;background:var(--p);border:1px solid var(--b);border-radius:var(--r);z-index:100;min-width:180px;box-shadow:0 4px 12px rgba(0,0,0,0.1)"><div class="menu-item" onclick="exportAllBibtex();toggleMenu()">Export BibTeX</div><div class="menu-item" onclick="exportAllJson();toggleMenu()">Export JSON</div><div class="menu-item" onclick="downloadAllPdfs();toggleMenu()">Download All PDFs</div><div class="menu-item" onclick="generateHtml();toggleMenu()">Static HTML</div><div style="border-top:1px solid var(--b)"></div><div class="menu-item" onclick="if(confirm('Reload all papers from server?')){loadPapers();updateStats()};toggleMenu()">Refresh</div></div></div><button class="btn btn-o btn-s" onclick="toggleDark()" title="Dark mode">&#x25D1;</button><button class="btn btn-o btn-s" onclick="toggleBatch()" title="Batch import">+B</button></div>
+<div class="ph"><span>LitManager</span><span style="flex:1"></span>
+<div class="menu-wrap" style="position:relative"><button class="btn btn-o btn-s" onclick="toggleMenu(event)">Menu</button>
+<div class="menu-drop" id="menuDrop" style="display:none;position:absolute;top:100%;right:0;background:var(--p);border:1px solid var(--b);border-radius:var(--r);z-index:100;min-width:180px;box-shadow:0 4px 12px rgba(0,0,0,.1)">
+<div class="menu-item" onclick="exportAllBibtex();toggleMenu()">Export BibTeX</div>
+<div class="menu-item" onclick="exportAllJson();toggleMenu()">Export JSON</div>
+<div class="menu-item" onclick="downloadAllPdfs();toggleMenu()">Download All PDFs</div>
+<div class="menu-item" onclick="generateHtml();toggleMenu()">Static HTML</div>
+<div style="border-top:1px solid var(--b)"></div>
+<div class="menu-item" onclick="if(confirm('Refresh?')){loadPapers();updateStats()};toggleMenu()">Refresh</div>
+</div></div>
+<button class="btn btn-o btn-s" onclick="toggleDark()" title="Dark mode">&#x25D1;</button>
+<button class="btn btn-o btn-s" onclick="toggleBatch()" title="Batch">+B</button></div>
 <div class="stats-bar" id="statsBar"></div>
 <div class="add-bar"><input type="text" id="addUrl" placeholder="Paste DOI or URL..." onkeydown="if(event.key==='Enter')addPaper(event)"><button class="btn btn-p btn-s" onclick="addPaper(event)">Add</button></div>
-<div id="batchPanel" style="display:none;padding:0 0.5rem 0.5rem"><div class="batch-area"><textarea id="batchInput" placeholder="Paste multiple DOIs/URLs, one per line..."></textarea><button class="btn btn-p btn-s" onclick="batchImport()">Import All</button></div></div>
-<div style="padding:0 0.5rem"><input type="text" class="srch" id="searchBox" placeholder="Search papers... (press /)" oninput="renderPapers()"></div>
+<div id="batchPanel" style="display:none;padding:0 .5rem .5rem"><div class="batch-area"><textarea id="batchInput" placeholder="Paste multiple DOIs/URLs, one per line..."></textarea><button class="btn btn-p btn-s" onclick="batchImport()">Import All</button></div></div>
+<div style="padding:0 .5rem"><input type="text" class="srch" id="searchBox" placeholder="Search papers... (press /)" oninput="renderPapers()"></div>
 <div class="pb" id="paperList"><div class="ec">Loading...</div></div>
 </div>
-<div id="center"><div class="ctb" id="centerToolbar"><span style="color:var(--t2);font-size:0.82rem">Select a paper</span></div><div class="cc" id="centerContent"><div class="ec">Select a paper to view details</div></div></div>
-<div id="right"><div class="ph"><span>AI Chat</span><button class="btn btn-o btn-s" id="askPaperBtn" onclick="askAboutPaper()" style="display:none">Ask Paper</button><button class="btn btn-p btn-s" id="configBtn" onclick="toggleConfig()" style="margin-left:auto">Settings</button></div><div id="configPanel" style="display:none;padding:0.5rem"><div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.35rem"><span style="width:40px;font-size:0.75rem">URL</span><input id="cfgUrl" placeholder="https://api.deepseek.com/v1" style="flex:1;padding:0.3rem 0.5rem;border-radius:4px;font-size:0.75rem"></div><div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.35rem"><span style="width:40px;font-size:0.75rem">Key</span><input type="password" id="cfgKey" placeholder="sk-..." style="flex:1;padding:0.3rem 0.5rem;border-radius:4px;font-size:0.75rem"></div><div style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.5rem"><span style="width:40px;font-size:0.75rem">Model</span><input id="cfgModel" value="deepseek-chat" style="flex:1;padding:0.3rem 0.5rem;border-radius:4px;font-size:0.75rem"></div><div style="display:flex;gap:0.35rem"><button class="btn btn-p btn-s" onclick="saveConfig()">Save</button><button class="btn btn-o btn-s" onclick="toggleConfig()">Cancel</button></div></div><div class="chat-msgs" id="chatMessages"><div class="ec">Configure API in Settings</div></div><div class="chat-inp"><textarea id="chatInput" placeholder="Ask anything..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat(event)}"></textarea><button class="btn btn-p btn-s" onclick="sendChat(event)">Send</button></div></div>
+<div class="grip" id="gripL"></div>
+<div id="center"><div class="ctb" id="centerToolbar"><span style="color:var(--t2);font-size:.82rem">Select a paper</span></div><div class="cc" id="centerContent"><div class="ec">Select a paper to view details</div></div></div>
+<div class="grip" id="gripR"></div>
+<div id="right"><div class="ph"><span>AI Chat</span><button class="btn btn-o btn-s" id="askPaperBtn" onclick="askAboutPaper()" style="display:none">Ask Paper</button><button class="btn btn-p btn-s" id="configBtn" onclick="toggleConfig()" style="margin-left:auto">Settings</button></div>
+<div id="configPanel" style="display:none;padding:.5rem">
+<div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.35rem"><span style="width:40px;font-size:.75rem">URL</span><input id="cfgUrl" placeholder="https://api.deepseek.com/v1" style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem"></div>
+<div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.35rem"><span style="width:40px;font-size:.75rem">Key</span><input type="password" id="cfgKey" placeholder="sk-..." style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem"></div>
+<div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.5rem"><span style="width:40px;font-size:.75rem">Model</span><input id="cfgModel" value="deepseek-chat" style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem"></div>
+<div style="display:flex;gap:.35rem"><button class="btn btn-p btn-s" onclick="saveConfig()">Save</button><button class="btn btn-o btn-s" onclick="toggleConfig()">Cancel</button></div></div>
+<div class="chat-msgs" id="chatMessages"><div class="ec">Configure API in Settings</div></div>
+<div class="chat-inp"><textarea id="chatInput" placeholder="Ask anything..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat(event)}"></textarea><button class="btn btn-p btn-s" onclick="sendChat(event)">Send</button></div>
+<div class="cmt-section" id="commentsSection" style="display:none">
+<div class="cmt-header" onclick="toggleComments()"><span id="cmtToggle">&#9654;</span> Comments <span id="cmtCount" style="font-weight:400"></span></div>
+<div class="cmt-list" id="cmtList"></div>
+<div class="cmt-inp"><input class="name-inp" id="cmtName" placeholder="Name"><input id="cmtText" placeholder="Add a comment..."><button class="btn btn-p btn-s" onclick="postComment()">Post</button></div>
+</div></div>
 </div>
 <div class="toast" id="toast"></div>
 <script>
 var PAPERS=[],selectedId=null,chatMsgs=[],cfg={base_url:'',api_key:'',model:'deepseek-chat'};
+var cmtsShown=false,cmtsCache={};
 
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 
@@ -93,11 +130,9 @@ async function loadConfig(){
   }catch(e){}
 }
 
-// Dark mode
 function toggleDark(){document.body.classList.toggle('dark');localStorage.setItem('litmanager_dark',document.body.classList.contains('dark')?'1':'0')}
 if(localStorage.getItem('litmanager_dark')==='1')document.body.classList.add('dark');
 
-// Stats bar
 function updateStats(){
   if(!PAPERS.length){document.getElementById('statsBar').innerHTML='';return}
   var pdfs=PAPERS.filter(function(p){return p.pdf_downloaded}).length;
@@ -110,43 +145,32 @@ function updateStats(){
   document.getElementById('statsBar').innerHTML=pdfs+'/'+PAPERS.length+' PDFs | '+yr+' | '+topJ+' | '+topT;
 }
 
-// Batch import
 function toggleBatch(){var p=document.getElementById('batchPanel');p.style.display=p.style.display==='none'?'block':'none'}
 
 async function batchImport(){
   var txt=document.getElementById('batchInput').value.trim();if(!txt)return;
   var urls=txt.split('\n').filter(function(l){return l.trim()});
-  toast('Importing '+urls.length+' papers...');
-  var ok=0,err=0;
+  toast('Importing '+urls.length+' papers...');var ok=0,err=0;
   for(var i=0;i<urls.length;i++){
-    try{
-      var r=await fetch('/api/papers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:urls[i].trim()})});
-      var d=await r.json();if(d.ok)ok++;else err++;
-    }catch(e){err++}
+    try{var r=await fetch('/api/papers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:urls[i].trim()})});var d=await r.json();if(d.ok)ok++;else err++}catch(e){err++}
   }
   toast('Done: '+ok+' added, '+err+' failed');
-  document.getElementById('batchInput').value='';
-  document.getElementById('batchPanel').style.display='none';
+  document.getElementById('batchInput').value='';document.getElementById('batchPanel').style.display='none';
   await loadPapers();
 }
 
 function renderPapers(){
   var q=(document.getElementById('searchBox').value||'').toLowerCase();
-  var list=document.getElementById('paperList');
-  if(!list)return;
+  var list=document.getElementById('paperList');if(!list)return;
   var filtered=PAPERS.filter(function(p){if(!q)return true;var h=[p.title,p.journal,(p.authors||[]).join(' '),(p.tags||[]).join(' '),p.doi||'',p.notes||'',p.abstract||''].join(' ').toLowerCase();return h.indexOf(q)>=0});
   if(!filtered.length){list.innerHTML='<div class="ec">No papers found</div>';return}
   var html='';
   for(var i=0;i<filtered.length;i++){
-    var p=filtered[i];var sel=p.id===selectedId?' sel':'';
+    var p=filtered[i],sel=p.id===selectedId?' sel':'';
     var authors=(p.authors||[]).slice(0,2).join(', ');if((p.authors||[]).length>2)authors+=' et al.';
-    html+='<div class="pitem'+sel+'" onclick="selectPaper(\''+p.id+'\')">';
-    html+='<div class="tl">'+esc(p.title||'Unknown')+'</div>';
-    html+='<div class="mt"><span>'+esc(authors||'Unknown')+'</span> '+(p.year?'<span>'+p.year+'</span>':'')+'</div>';
-    if((p.tags||[]).length){html+='<div style="margin-top:0.2rem">';
-      for(var j=0;j<p.tags.length;j++)html+='<span class="tag">'+esc(p.tags[j])+'</span>';
-    html+='</div>';}
-    if(p.notes)html+='<div style="font-size:0.68rem;color:var(--t2);margin-top:0.15rem">'+esc(p.notes.substring(0,80))+'</div>';
+    html+='<div class="pitem'+sel+'" onclick="selectPaper(\''+p.id+'\')"><div class="tl">'+esc(p.title||'Unknown')+'</div><div class="mt"><span>'+esc(authors||'Unknown')+'</span> '+(p.year?'<span>'+p.year+'</span>':'')+'</div>';
+    if((p.tags||[]).length){html+='<div style="margin-top:.2rem">';for(var j=0;j<p.tags.length;j++)html+='<span class="tag">'+esc(p.tags[j])+'</span>';html+='</div>'}
+    if(p.notes)html+='<div style="font-size:.68rem;color:var(--t2);margin-top:.15rem">'+esc(p.notes.substring(0,80))+'</div>';
     html+='</div>';
   }
   list.innerHTML=html;
@@ -155,8 +179,7 @@ function renderPapers(){
 function getPaper(id){for(var i=0;i<PAPERS.length;i++)if(PAPERS[i].id===id)return PAPERS[i];return null}
 
 function selectPaper(id){
-  selectedId=id;renderPapers();
-  var p=getPaper(id);if(!p)return;
+  selectedId=id;renderPapers();var p=getPaper(id);if(!p)return;
   var tb=document.getElementById('centerToolbar');
   tb.innerHTML='<span style="font-weight:600">'+esc(p.title?p.title.substring(0,60)+'...':'')+'</span><span style="flex:1"></span><button class="btn btn-o btn-s" onclick="exportPaper(\''+p.id+'\')">Export</button><button class="btn btn-o btn-s" onclick="deletePaper(\''+p.id+'\')">Delete</button>';
   var c='<div class="dt">'+esc(p.title)+'</div>';
@@ -166,31 +189,31 @@ function selectPaper(id){
   if(p.doi)c+='<b>DOI:</b> <a href="https://doi.org/'+p.doi+'" target="_blank" style="color:var(--a)">'+esc(p.doi)+'</a><br>';
   if(p.arxiv_id)c+='<b>arXiv:</b> '+esc(p.arxiv_id)+'<br>';
   c+='<b>Added:</b> '+(p.added||'N/A');
-  if(p.pdf_local)c+='<br><b>Local PDF:</b> <code style="font-size:0.75rem">'+esc(p.pdf_local)+'</code>';
+  if(p.pdf_local)c+='<br><b>Local PDF:</b> <code style="font-size:.75rem">'+esc(p.pdf_local)+'</code>';
   c+='</div>';
-  // Tags with edit
-  c+='<div style="margin-bottom:1rem"><b style="font-size:0.82rem">Tags:</b> <div style="display:inline-flex;flex-wrap:wrap;gap:0.2rem;margin-top:0.25rem">';
+  c+='<div style="margin-bottom:1rem"><b style="font-size:.82rem">Tags:</b> <div style="display:inline-flex;flex-wrap:wrap;gap:.2rem;margin-top:.25rem">';
   if(p.tags){for(var i=0;i<p.tags.length;i++)c+='<span class="tag">'+esc(p.tags[i])+'<span class="del" onclick="event.stopPropagation();removeTag(\''+p.id+'\',\''+p.tags[i].replace(/'/g,"\\'")+'\')">x</span></span>'}
   c+='<span class="tag-add" onclick="event.stopPropagation();addTag(\''+p.id+'\')">+ tag</span></div></div>';
-  // Notes
-  c+='<div style="margin-bottom:1rem"><b style="font-size:0.82rem">Notes:</b><br><textarea class="note-edit" id="noteEdit" placeholder="Add notes about this paper...">'+esc(p.notes||'')+'</textarea><button class="btn btn-p btn-s" style="margin-top:0.25rem" onclick="saveNotes(\''+p.id+'\')">Save Notes</button></div>';
-  // Actions
-  c+='<div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:1rem">';
+  c+='<div style="margin-bottom:1rem"><b style="font-size:.82rem">Notes:</b><br><textarea class="note-edit" id="noteEdit" placeholder="Add notes...">'+esc(p.notes||'')+'</textarea><button class="btn btn-p btn-s" style="margin-top:.25rem" onclick="saveNotes(\''+p.id+'\')">Save Notes</button></div>';
+  c+='<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem">';
   if(p.pdf_downloaded)c+='<button class="btn btn-p btn-s" onclick="showPdf(\''+p.id+'\')">Preview PDF</button>';
   if(p.pdf_url)c+='<button class="btn btn-p btn-s" onclick="downloadPdf(event,\''+p.id+'\',\''+(p.pdf_url||'').replace(/'/g,"\\'")+'\')">'+(p.pdf_downloaded?'Re-download':'Download PDF')+'</button>';
-  if(!p.pdf_downloaded && p.pdf_url)c+='<button class="btn btn-o btn-s" onclick="openPdfUrl(\''+p.id+'\',\''+p.pdf_url.replace(/'/g,"\\'")+'\')">Open Online</button>';
+  if(!p.pdf_downloaded&&p.pdf_url)c+='<button class="btn btn-o btn-s" onclick="openPdfUrl(\''+p.id+'\',\''+p.pdf_url.replace(/'/g,"\\'")+'\')">Open Online</button>';
   if(p.pdf_url)c+='<button class="btn btn-o btn-s" onclick="markDownloaded(\''+p.id+'\')">Mark Done</button>';
   c+='<button class="btn btn-o btn-s" onclick="copyBibtex(\''+p.id+'\')">Copy BibTeX</button>';
   if(p.url)c+='<a class="btn btn-o btn-s" href="'+p.url+'" target="_blank">Source</a>';
   c+='</div>';
   if(p.abstract)c+='<div class="da">'+esc(p.abstract)+'</div>';
-  if(p.bibtex)c+='<div style="margin-bottom:1.2rem"><h3 style="font-size:0.75rem;color:var(--t2);text-transform:uppercase;margin-bottom:0.4rem">BibTeX</h3><div class="bb">'+esc(p.bibtex)+'</div></div>';
-  if(p.pdf_downloaded)c+='<div style="margin-bottom:1.2rem"><h3 style="font-size:0.75rem;color:var(--t2);text-transform:uppercase;margin-bottom:0.4rem">PDF Preview</h3><iframe class="pdf-frame" src="/api/pdf/'+p.id+'" style="width:100%;height:600px;border:none;background:#fff"></iframe></div>';
+  if(p.bibtex)c+='<div style="margin-bottom:1.2rem"><h3 style="font-size:.75rem;color:var(--t2);text-transform:uppercase;margin-bottom:.4rem">BibTeX</h3><div class="bb">'+esc(p.bibtex)+'</div></div>';
+  if(p.pdf_downloaded)c+='<div style="margin-bottom:1.2rem"><h3 style="font-size:.75rem;color:var(--t2);text-transform:uppercase;margin-bottom:.4rem">PDF Preview</h3><iframe class="pdf-frame" src="/api/pdf/'+p.id+'" style="width:100%;height:600px;border:none;background:#fff"></iframe></div>';
   document.getElementById('centerContent').innerHTML=c;
   document.getElementById('askPaperBtn').style.display='inline-flex';
+  // Show comments for this paper
+  loadComments(p.doi);
+  document.getElementById('commentsSection').style.display='block';
 }
 
-async function addTag(id){var t=prompt('Enter new tag:');if(!t)return;var p=getPaper(id);if(!p)return;var tags=(p.tags||[]).slice();tags.push(t);await updatePaper(id,{tags:tags})}
+async function addTag(id){var t=prompt('New tag:');if(!t)return;var p=getPaper(id);if(!p)return;var tags=(p.tags||[]).slice();tags.push(t);await updatePaper(id,{tags:tags})}
 async function removeTag(id,tag){var p=getPaper(id);if(!p)return;var tags=(p.tags||[]).filter(function(x){return x!==tag});await updatePaper(id,{tags:tags})}
 async function saveNotes(id){var notes=document.getElementById('noteEdit').value;await updatePaper(id,{notes:notes})}
 async function updatePaper(id,fields){fields.id=id;try{var r=await fetch('/api/papers/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(fields)});var d=await r.json();if(d.ok){await loadPapers();selectPaper(id);toast('Updated')}else toast('Error: '+d.error)}catch(e){toast('Failed: '+e.message)}}
@@ -198,59 +221,142 @@ async function updatePaper(id,fields){fields.id=id;try{var r=await fetch('/api/p
 async function downloadPdf(e,id,pdfUrl){
   var btn=e?e.target:event?event.target:document.querySelector('#centerContent .btn-p');if(!pdfUrl){toast('No PDF URL');return}
   var orig=btn.innerHTML;btn.disabled=true;btn.innerHTML='<span class="spin" style="border-top-color:var(--a);border-color:rgba(0,0,0,.15)"></span>';
-  try{var r=await fetch(pdfUrl,{credentials:'include'});if(r.ok){var blob=await r.blob();var fd=new FormData();fd.append('pdf',blob,id+'.pdf');var sr=await fetch('/api/save-pdf?id='+id,{method:'POST',body:fd});var sd=await sr.json();if(sd.ok){toast('Saved to pdfs/ ('+(sd.size/1024).toFixed(0)+' KB)');await loadPapers();selectPaper(id);btn.disabled=false;btn.innerHTML=orig;return}throw new Error(sd.error)}throw new Error('HTTP '+r.status)}catch(e1){toast('Trying server fetch...');
+  try{var r=await fetch(pdfUrl,{credentials:'include'});if(r.ok){var blob=await r.blob();var fd=new FormData();fd.append('pdf',blob,id+'.pdf');var sr=await fetch('/api/save-pdf?id='+id,{method:'POST',body:fd});var sd=await sr.json();if(sd.ok){toast('Saved to pdfs/ ('+(sd.size/1024).toFixed(0)+' KB)');await loadPapers();selectPaper(id);btn.disabled=false;btn.innerHTML=orig;return}throw new Error(sd.error)}throw new Error('HTTP '+r.status)}catch(e1){toast('Trying server...');
   try{var r2=await fetch('/api/fetch-and-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:pdfUrl,id:id})});var d2=await r2.json();if(d2.ok){toast('Saved to pdfs/ ('+(d2.size/1024).toFixed(0)+' KB)');await loadPapers();selectPaper(id)}else throw new Error(d2.error)}catch(e2){
-    toast('Opening save dialog...');fetch('/api/proxy-download?url='+encodeURIComponent(pdfUrl)+'&id='+id).then(function(r){if(r.ok)return r.blob()}).then(function(blob){if(blob){var u=URL.createObjectURL(blob);var a=document.createElement('a');a.href=u;a.download=id+'.pdf';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);toast('Download started')}else{window.open(pdfUrl,'_blank')}}).catch(function(){window.open(pdfUrl,'_blank')})
+    toast('Opening in browser...');window.open(pdfUrl,'_blank');
   }}btn.disabled=false;btn.innerHTML=orig;
 }
 
-function showPdf(id){document.getElementById('centerContent').innerHTML='<div style="margin-bottom:1.2rem"><h3 style="font-size:0.75rem;color:var(--t2);text-transform:uppercase;margin-bottom:0.4rem">PDF Preview</h3><div style="margin-bottom:0.5rem"><button class="btn btn-o btn-s" onclick="selectPaper(\''+id+'\')">Back to Details</button></div><iframe class="pdf-frame" src="/api/pdf/'+id+'" style="width:100%;height:600px;border:none;background:#fff"></iframe></div>'}
-function openPdfUrl(id,url){window.open(url,'_blank');toast('PDF opened. Use Ctrl+S to save to pdfs/ folder. Then click Mark Done.')}
+function showPdf(id){document.getElementById('centerContent').innerHTML='<div style="margin-bottom:1.2rem"><h3 style="font-size:.75rem;color:var(--t2);text-transform:uppercase;margin-bottom:.4rem">PDF Preview</h3><div style="margin-bottom:.5rem"><button class="btn btn-o btn-s" onclick="selectPaper(\''+id+'\')">Back to Details</button></div><iframe class="pdf-frame" src="/api/pdf/'+id+'" style="width:100%;height:600px;border:none;background:#fff"></iframe></div>'}
+function openPdfUrl(id,url){window.open(url,'_blank');toast('Save PDF to pdfs/ folder, then click Mark Done.')}
 async function markDownloaded(id){try{var r=await fetch('/api/papers/mark-downloaded',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})});var d=await r.json();if(d.ok){await loadPapers();selectPaper(id);toast('Marked as downloaded!')}else toast('Error: '+d.error)}catch(e){toast('Failed: '+e.message)}}
 
 async function addPaper(e){
   var inp=document.getElementById('addUrl');var url=inp.value.trim();if(!url){toast('Paste a URL first');return}
-  inp.value='';var btn=e?e.target:document.querySelector('#left .btn-p');var orig=btn.innerHTML;btn.disabled=true;btn.innerHTML='<span class="spin"></span>';toast('Fetching paper metadata...');
+  inp.value='';var btn=e?e.target:document.querySelector('#left .btn-p');var orig=btn.innerHTML;btn.disabled=true;btn.innerHTML='<span class="spin"></span>';toast('Fetching...');
   try{var r=await fetch('/api/papers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url})});var d=await r.json();if(d.ok){await loadPapers();selectPaper(d.paper.id);toast(d.added?'Paper added!':'Paper already in library')}else toast('Error: '+d.error)}catch(e){toast('Failed: '+e.message)}
   btn.disabled=false;btn.innerHTML=orig;updateStats();
 }
 
 async function deletePaper(id){if(!confirm('Delete this paper?'))return;
-  try{var r=await fetch('/api/papers/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})});var d=await r.json();if(d.ok){if(selectedId===id)selectedId=null;document.getElementById('centerContent').innerHTML='<div class="ec">Select a paper to view details</div>';document.getElementById('centerToolbar').innerHTML='<span style="color:var(--t2);font-size:0.82rem">Select a paper</span>';document.getElementById('askPaperBtn').style.display='none';await loadPapers();updateStats();toast('Paper deleted')}else toast('Error: '+d.error)}catch(e){toast('Failed: '+e.message)}
+  try{var r=await fetch('/api/papers/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})});var d=await r.json();if(d.ok){if(selectedId===id)selectedId=null;document.getElementById('centerContent').innerHTML='<div class="ec">Select a paper</div>';document.getElementById('centerToolbar').innerHTML='<span style="color:var(--t2);font-size:.82rem">Select a paper</span>';document.getElementById('askPaperBtn').style.display='none';document.getElementById('commentsSection').style.display='none';await loadPapers();updateStats();toast('Paper deleted')}else toast('Error: '+d.error)}catch(e){toast('Failed: '+e.message)}
 }
 
 function copyBibtex(id){var p=getPaper(id);if(!p||!p.bibtex){toast('No BibTeX');return}navigator.clipboard.writeText(p.bibtex).then(function(){toast('BibTeX copied!')})}
-
 function exportPaper(id){var p=getPaper(id);if(!p)return;var j=JSON.stringify(p,null,2);var b=new Blob([j],{type:'application/json'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download=p.id+'.json';a.click();URL.revokeObjectURL(u);toast('Exported '+p.id+'.json')}
-
 function exportAllBibtex(){var all=PAPERS.filter(function(p){return p.bibtex}).map(function(p){return p.bibtex}).join('\n\n');if(!all){toast('No entries');return}var b=new Blob([all],{type:'text/plain'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='papers.bib';a.click();URL.revokeObjectURL(u);toast('Exported BibTeX')}
-
 function exportAllJson(){var j=JSON.stringify({papers:PAPERS},null,2);var b=new Blob([j],{type:'application/json'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='papers.json';a.click();URL.revokeObjectURL(u);toast('Exported papers.json')}
 
-function downloadAllPdfs(){var missing=PAPERS.filter(function(p){return!p.pdf_downloaded&&p.pdf_url});if(!missing.length){toast('All PDFs downloaded');return}toast('Downloading '+missing.length+' PDFs...');missing.forEach(function(p,i){setTimeout(function(){var a=document.createElement('a');a.href='/api/proxy-download?url='+encodeURIComponent(p.pdf_url)+'&id='+p.id;a.click();if(i===missing.length-1){setTimeout(function(){loadPapers();updateStats()},3000)}},i*1000)})}
+// Fixed Download All — opens URLs one by one instead of crashing the server
+async function downloadAllPdfs(){
+  var missing=PAPERS.filter(function(p){return!p.pdf_downloaded&&p.pdf_url});
+  if(!missing.length){toast('All PDFs already downloaded');return}
+  toast('Opening '+missing.length+' PDFs in browser tabs. Save each to pdfs/ folder.');
+  for(var i=0;i<missing.length;i++){
+    var p=missing[i];
+    setTimeout(function(url){window.open(url,'_blank')},i*800,p.pdf_url);
+  }
+}
 
 function toggleMenu(e){if(e)e.stopPropagation();var d=document.getElementById('menuDrop');d.style.display=d.style.display==='none'?'block':'none'}
 function generateHtml(){fetch('/api/generate-html',{method:'POST'}).then(function(r){return r.json()}).then(function(d){if(d.ok)toast('HTML saved: '+d.path);else toast('Error: '+d.error)}).catch(function(e){toast('Failed: '+e.message)})}
-document.addEventListener('click',function(e){var d=document.getElementById('menuDrop');var b=e.target;if(d&&d.style.display==='block'&&!b.closest('.menu-wrap'))d.style.display='none'})
+document.addEventListener('click',function(e){var d=document.getElementById('menuDrop');if(d&&d.style.display==='block'&&!e.target.closest('.menu-wrap'))d.style.display='none'})
+
+// === Comments ===
+async function loadComments(doi){
+  if(!doi){document.getElementById('cmtList').innerHTML='<div style="color:var(--t2);font-size:.75rem">No DOI — comments unavailable</div>';return}
+  try{
+    var r=await fetch('/api/comments?doi='+encodeURIComponent(doi));
+    var comments=await r.json();
+    cmtsCache[doi]=comments;
+    renderComments(comments);
+  }catch(e){document.getElementById('cmtList').innerHTML='<div style="color:var(--t2);font-size:.75rem">Could not load comments</div>'}
+}
+
+function renderComments(comments){
+  var el=document.getElementById('cmtList');
+  var count=document.getElementById('cmtCount');
+  count.textContent=comments.length?'('+comments.length+')':'';
+  if(!comments.length){el.innerHTML='<div style="color:var(--t2);font-size:.75rem">No comments yet. Be the first!</div>';return}
+  var html='';
+  for(var i=0;i<comments.length;i++){
+    var c=comments[i];
+    html+='<div class="cmt"><span class="cmt-author">'+esc(c.author||'Anonymous')+'</span><span class="cmt-time">'+c.time+'</span><div class="cmt-text">'+esc(c.text)+'</div></div>';
+  }
+  el.innerHTML=html;
+  el.scrollTop=el.scrollHeight;
+}
+
+async function postComment(){
+  var p=getPaper(selectedId);if(!p||!p.doi){toast('No DOI for this paper');return}
+  var author=document.getElementById('cmtName').value.trim()||'Anonymous';
+  var text=document.getElementById('cmtText').value.trim();if(!text)return;
+  try{
+    var r=await fetch('/api/comments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({doi:p.doi,author:author,text:text})});
+    var d=await r.json();
+    if(d.ok){
+      document.getElementById('cmtText').value='';
+      cmtsCache[p.doi]=d.comments;
+      renderComments(d.comments);
+    }else toast('Error: '+d.error);
+  }catch(e){toast('Failed: '+e.message)}
+}
+
+function toggleComments(){
+  var list=document.getElementById('cmtList');
+  var inp=document.querySelector('.cmt-inp');
+  var toggle=document.getElementById('cmtToggle');
+  if(list.style.display==='none'){
+    list.style.display='block';inp.style.display='flex';toggle.textContent='▼';
+  }else{
+    list.style.display='none';inp.style.display='none';toggle.textContent='▶';
+  }
+}
 
 function renderChat(){
   var c=document.getElementById('chatMessages');if(!chatMsgs.length){c.innerHTML='<div class="ec">'+(cfg.api_key?'Ask anything about papers':'Configure API in Settings')+'</div>';return}
   c.innerHTML='';for(var i=0;i<chatMsgs.length;i++){var m=chatMsgs[i];var d=document.createElement('div');d.className='msg '+(m.role==='user'?'u':'a');d.innerHTML=m.role==='assistant'?renderMd(m.content):esc(m.content);c.appendChild(d)}c.scrollTop=c.scrollHeight;
 }
-
 function renderMd(txt){var s=esc(txt);s=s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');s=s.replace(/\*(.+?)\*/g,'<em>$1</em>');s=s.replace(/`([^`]+)`/g,'<code>$1</code>');s=s.replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>');s=s.replace(/\n/g,'<br>');return s}
 
 async function sendChat(e){var inp=document.getElementById('chatInput');var msg=inp.value.trim();if(!msg)return;if(!cfg.api_key){toast('Configure API in Settings first');toggleConfig();return}inp.value='';chatMsgs.push({role:'user',content:msg});renderChat();var btn=e?e.target:document.querySelector('#right .btn-p');var orig=btn.innerHTML;btn.disabled=true;btn.innerHTML='<span class="spin"></span>';
 try{var r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatMsgs})});var d=await r.json();if(d.ok&&d.message){chatMsgs.push(d.message);renderChat()}else{chatMsgs.push({role:'assistant',content:'Error: '+(d.error||'Unknown')});renderChat()}}catch(e){chatMsgs.push({role:'assistant',content:'Network error: '+e.message});renderChat()}btn.disabled=false;btn.innerHTML=orig}
 
 function askAboutPaper(){if(!selectedId)return;var p=getPaper(selectedId);if(!p)return;if(!cfg.api_key){toast('Configure API in Settings first');toggleConfig();return}var ctx='I want to discuss this paper:\n\nTitle: '+p.title+'\nAuthors: '+(p.authors||[]).join(', ')+'\nJournal: '+(p.journal||'')+'\nYear: '+(p.year||'')+'\nDOI: '+(p.doi||'')+'\nAbstract: '+(p.abstract||'N/A');if(p.notes)ctx+='\nMy notes: '+p.notes;chatMsgs.push({role:'user',content:ctx});renderChat();document.getElementById('chatInput').focus();document.getElementById('chatMessages').scrollTop=document.getElementById('chatMessages').scrollHeight}
-
 function toggleConfig(){var p=document.getElementById('configPanel');if(p.style.display==='none'){p.style.display='block';document.getElementById('cfgUrl').value=cfg.base_url||'';document.getElementById('cfgKey').value=cfg.api_key||'';document.getElementById('cfgModel').value=cfg.model||'deepseek-chat'}else p.style.display='none'}
-
 async function saveConfig(){var base_url=document.getElementById('cfgUrl').value.trim();var api_key=document.getElementById('cfgKey').value.trim();var model=document.getElementById('cfgModel').value.trim()||'deepseek-chat';
 try{var r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base_url:base_url,api_key:api_key,model:model})});var d=await r.json();if(d.ok){cfg=d.config;cfg.api_key=api_key;localStorage.setItem('litmanager_apikey',btoa(api_key));document.getElementById('configPanel').style.display='none';toast('API config saved')}else toast('Error: '+d.error)}catch(e){toast('Failed: '+e.message)}}
 
-// Keyboard shortcuts
+// === Drag handles ===
+(function(){
+  var gripL=document.getElementById('gripL'),gripR=document.getElementById('gripR');
+  var left=document.getElementById('left'),right=document.getElementById('right');
+  var dragging=null,startX=0,startW=0,target=null;
+
+  function onDown(e){
+    dragging=e.target;target=e.target===gripL?left:right;
+    startX=e.clientX;startW=target.offsetWidth;
+    dragging.classList.add('on');document.body.style.cursor='col-resize';
+    e.preventDefault();
+  }
+  function onMove(e){
+    if(!dragging)return;
+    var dx=e.clientX-startX;
+    var newW=target===left?startW+dx:startW-dx;
+    newW=Math.max(200,Math.min(newW,window.innerWidth*0.55));
+    target.style.width=newW+'px';
+  }
+  function onUp(){
+    if(!dragging)return;
+    dragging.classList.remove('on');document.body.style.cursor='';
+    dragging=null;target=null;
+  }
+  gripL.addEventListener('mousedown',onDown);
+  gripR.addEventListener('mousedown',onDown);
+  document.addEventListener('mousemove',onMove);
+  document.addEventListener('mouseup',onUp);
+})();
+
 document.addEventListener('keydown',function(e){
   if(e.key==='/'&&document.activeElement===document.body){e.preventDefault();document.getElementById('searchBox').focus()}
 });
