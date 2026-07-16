@@ -29,9 +29,12 @@ def clean():
 
 
 def build():
-    cmd = [sys.executable, "-m", "PyInstaller", "--onedir", "--name", "Litmanger", "--clean"]
+    cmd = [sys.executable, "-m", "PyInstaller", "--onefile", "--name", "Litmanger", "--clean"]
     if IS_WIN:
         cmd.append("--noconsole")
+        cmd += ["--add-data", "index.html;."]
+    else:
+        cmd += ["--add-data", "index.html:."]
     cmd += [
         "--hidden-import", "cryptography",
         "--hidden-import", "cryptography.hazmat.primitives.asymmetric.ed25519",
@@ -41,38 +44,14 @@ def build():
     print(f"[BUILD] Running: {' '.join(cmd)}")
     subprocess.check_call(cmd)
 
-    out_dir = DIST / "Litmanger"
+    out_dir = DIST
 
-    # Copy data files
-    for f in ("index.html", "papers.json", "config.json"):
-        src = ROOT / f
-        if src.exists():
-            shutil.copy2(src, out_dir / f)
-            print(f"[BUILD] Copied {f}")
-
-    # Empty pdfs dir
-    (out_dir / "pdfs").mkdir(exist_ok=True)
-
-    # Platform launcher
-    if IS_WIN:
-        launcher = out_dir / "start.bat"
-        launcher.write_text(
-            '@echo off\r\ncd /d "%~dp0"\r\nif not exist "pdfs" mkdir "pdfs"\r\nstart "" /B "Litmanger.exe"\r\n',
-            encoding="ascii",
-        )
-    else:
-        launcher = out_dir / "Litmanger"
-        launch_script = out_dir / "start.sh"
-        launch_script.write_text('#!/bin/sh\ncd "$(dirname "$0")"\nmkdir -p pdfs\n./Litmanger &\n', encoding="ascii")
-        launch_script.chmod(0o755)
-
-    # Verify output
+    # PyInstaller --onefile puts the exe directly in dist/
     exe = out_dir / ("Litmanger.exe" if IS_WIN else "Litmanger")
     if exe.exists():
         size_mb = exe.stat().st_size / (1024 * 1024)
         print(f"[BUILD] Done: {exe} ({size_mb:.1f} MB)")
     else:
-        # On Windows PyInstaller puts exe at root, on Linux/Mac in _internal or as standalone
         candidates = list(out_dir.glob("Litmanger*"))
         print(f"[BUILD] Output files: {[c.name for c in candidates]}")
 

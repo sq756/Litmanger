@@ -47,32 +47,23 @@ jobs:
       - name: Build standalone
         run: python build_exe.py
 
-      - name: Package (zip via Python, cross-platform)
+      - name: Rename for release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
         run: |
-          python -c "
-          import zipfile, os, sys
-          from pathlib import Path
-          src = Path('dist/Litmanger')
-          out = Path('litmanger-${{ matrix.name }}.zip')
-          with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as zf:
-              for root, dirs, files in os.walk(src):
-                  for f in files:
-                      fp = Path(root) / f
-                      zf.write(fp, fp.relative_to(src))
-          size_mb = out.stat().st_size / 1048576
-          print(f'{out} ({size_mb:.1f} MB)')
-          "
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: litmanger-${{ matrix.name }}
-          path: litmanger-${{ matrix.name }}.zip
+          if [ "${{ matrix.name }}" = "windows" ]; then
+            cp dist/Litmanger.exe litmanger-windows.exe
+            echo "ASSET=litmanger-windows.exe" >> $GITHUB_ENV
+          elif [ "${{ matrix.name }}" = "macos" ]; then
+            cp dist/Litmanger litmanger-macos
+            echo "ASSET=litmanger-macos" >> $GITHUB_ENV
+          else
+            cp dist/Litmanger litmanger-linux
+            echo "ASSET=litmanger-linux" >> $GITHUB_ENV
+          fi
 
       - name: Upload to release
         if: startsWith(github.ref, 'refs/tags/v')
-        continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
-          files: litmanger-${{ matrix.name }}.zip
-          fail_on_unmatched_files: false
+          files: ${{ env.ASSET }}
