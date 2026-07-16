@@ -16,6 +16,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg
 .btn-p{background:var(--a);color:#fff}.btn-p:hover{background:var(--a2)}
 .btn-o{background:transparent;color:var(--a);border:1px solid var(--b)}.btn-o:hover{background:var(--h)}
 .btn-s{padding:.25rem .5rem;font-size:.72rem}
+.btn-on{background:var(--a);color:#fff}
 input,textarea{font-family:inherit;outline:none;background:var(--p);color:var(--t);border:1px solid var(--b)}
 input:focus,textarea:focus{border-color:var(--a)}
 .srch{width:100%;padding:.5rem .75rem;border-radius:var(--r);font-size:.82rem;background:var(--bg)}
@@ -32,6 +33,21 @@ input:focus,textarea:focus{border-color:var(--a)}
 .tag-add{display:inline-block;padding:.1rem .4rem;border-radius:10px;font-size:.65rem;border:1px dashed var(--b);color:var(--t2);cursor:pointer;margin-right:.2rem}
 .ctb{display:flex;align-items:center;gap:.5rem;padding:.5rem 1rem;border-bottom:1px solid var(--b);min-height:40px;flex-shrink:0}
 .cc{flex:1;overflow-y:auto;padding:1.5rem}
+.cv{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.cv-top{flex:1;min-height:200px;overflow:hidden;border-bottom:2px solid var(--a)}
+.cv-top iframe{width:100%;height:100%;border:none;background:#fff}
+.cv-bot{flex:1;min-height:150px;display:flex;flex-direction:column;overflow:hidden}
+.cv-bot textarea{flex:1;border:none;border-radius:0;padding:.75rem;font-size:.8rem;line-height:1.6;resize:none;font-family:inherit}
+.cv-bot .md-preview{flex:1;overflow-y:auto;padding:.75rem;font-size:.82rem;line-height:1.65}
+.md-preview h1,.md-preview h2,.md-preview h3{margin:.5rem 0 .3rem}
+.md-preview p{margin:.3rem 0}
+.md-preview code{background:var(--bg);padding:.1rem .3rem;border-radius:3px;font-size:.78rem}
+.md-preview pre{background:var(--bg);padding:.6rem;border-radius:var(--r);overflow-x:auto;font-size:.76rem;margin:.4rem 0}
+.md-preview pre code{background:none;padding:0}
+.md-preview blockquote{border-left:3px solid var(--a);padding-left:.6rem;color:var(--t2);margin:.4rem 0}
+.md-preview table{border-collapse:collapse;width:100%;margin:.4rem 0}
+.md-preview td,.md-preview th{border:1px solid var(--b);padding:.25rem .5rem;font-size:.78rem}
+.md-view .katex{font-size:1.05em}
 .dt{font-size:1.3rem;font-weight:700;line-height:1.4;margin-bottom:.5rem}
 .dm{font-size:.85rem;color:var(--t2);margin-bottom:1rem;line-height:1.6}
 .da{font-size:.9rem;line-height:1.7;color:var(--t);margin-bottom:1.5rem;white-space:pre-wrap}
@@ -51,11 +67,10 @@ input:focus,textarea:focus{border-color:var(--a)}
 .stats-bar{display:flex;gap:1.5rem;padding:.4rem .75rem;font-size:.7rem;color:var(--t2);border-bottom:1px solid var(--b);flex-shrink:0;overflow-x:auto}
 .batch-area{display:flex;flex-direction:column;gap:.35rem;padding:.5rem}
 .batch-area textarea{width:100%;min-height:80px;padding:.5rem;border-radius:var(--r);font-size:.75rem;resize:vertical}
-.note-edit{width:100%;min-height:60px;padding:.5rem;border-radius:var(--r);font-size:.82rem;margin-top:.5rem;resize:vertical}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
 .menu-item{padding:.5rem .75rem;font-size:.78rem;cursor:pointer;white-space:nowrap;transition:background .12s}.menu-item:hover{background:var(--h)}
-.cmt-section{border-top:1px solid var(--b);flex-shrink:0;max-height:40%;display:flex;flex-direction:column}
-.cmt-header{padding:.5rem .75rem;font-size:.75rem;font-weight:600;color:var(--t2);cursor:pointer;display:flex;align-items:center;gap:.35rem;flex-shrink:0}
+
+.cmt-section{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
 .cmt-list{flex:1;overflow-y:auto;padding:.5rem .75rem;font-size:.78rem}
 .cmt{background:var(--bg);border-radius:var(--r);padding:.4rem .6rem;margin-bottom:.35rem;line-height:1.4}
 .cmt .cmt-author{font-weight:600;font-size:.72rem;color:var(--a)}
@@ -64,6 +79,11 @@ input:focus,textarea:focus{border-color:var(--a)}
 .cmt-inp{display:flex;gap:.25rem;padding:.35rem .5rem;border-top:1px solid var(--b);flex-shrink:0}
 .cmt-inp input{flex:1;padding:.3rem .4rem;border-radius:var(--r);font-size:.72rem}
 .cmt-inp .name-inp{width:80px;flex:none}
+
+.tabs{display:flex;border-bottom:1px solid var(--b);flex-shrink:0}
+.tabs span{padding:.35rem .75rem;font-size:.72rem;cursor:pointer;color:var(--t2);border-bottom:2px solid transparent;transition:all .12s}
+.tabs span.on{color:var(--a);border-bottom-color:var(--a);font-weight:600}
+
 .sort-row{display:flex;gap:.3rem;padding:0 .5rem .35rem}
 .sort-row select{padding:.25rem .35rem;border-radius:var(--r);font-size:.7rem;background:var(--bg);color:var(--t2);border:1px solid var(--b);outline:none;cursor:pointer}
 .theme-panel{display:none;padding:.5rem;border-bottom:1px solid var(--b);flex-shrink:0}
@@ -77,7 +97,9 @@ input:focus,textarea:focus{border-color:var(--a)}
 .theme-presets span.on{border-color:var(--a);transform:scale(1.15)}
 #bgVideo{display:none;position:fixed;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:-2;pointer-events:none}
 #bgOverlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;pointer-events:none}
-</style></head>
+</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+</head>
 <body>
 <div id="bgVideo"></div><div id="bgOverlay"></div>
 <div id="app">
@@ -100,50 +122,69 @@ input:focus,textarea:focus{border-color:var(--a)}
 
 <div class="theme-panel" id="themePanel">
 <div class="theme-presets" id="themePresets"></div>
-<div class="row"><label>Accent</label><input type="color" id="tAccent" value="#4f46e5" onchange="applyTheme()"></div>
+<div class="row"><label>Accent</label><input type="color" id="tAccent" value="#4f46e5" onchange="applyTheme()" autocomplete="off"></div>
 <div class="row"><label>Opacity</label><input type="range" id="tOpacity" min="20" max="100" value="100" oninput="applyTheme()"><span style="font-size:.65rem;width:30px;text-align:right" id="tOpacityVal">100%</span></div>
 <div class="row"><label>Blur</label><input type="range" id="tBlur" min="0" max="30" value="0" oninput="applyTheme()"><span style="font-size:.65rem;width:30px;text-align:right" id="tBlurVal">0px</span></div>
-<div class="row"><label>BG Image</label><input type="text" id="tBgUrl" placeholder="Image URL or video file..." onchange="applyTheme()"><button class="btn btn-o btn-s" onclick="document.getElementById('tBgFile').click()" style="font-size:.65rem">...</button><input type="file" id="tBgFile" accept="image/*,video/*" style="display:none" onchange="loadBgFile()"></div>
+<div class="row"><label>BG Image</label><input type="text" id="tBgUrl" placeholder="Image URL or video file..." onchange="applyTheme()" autocomplete="off"><button class="btn btn-o btn-s" onclick="document.getElementById('tBgFile').click()" style="font-size:.65rem">...</button><input type="file" id="tBgFile" accept="image/*,video/*" style="display:none" onchange="loadBgFile()"></div>
 </div>
-<div class="add-bar"><input type="text" id="addUrl" placeholder="Paste DOI or URL..." onkeydown="if(event.key==='Enter')addPaper(event)"><button class="btn btn-p btn-s" onclick="addPaper(event)">Add</button></div>
-<div id="batchPanel" style="display:none;padding:0 .5rem .5rem"><div class="batch-area"><textarea id="batchInput" placeholder="Paste multiple DOIs/URLs, one per line..."></textarea><button class="btn btn-p btn-s" onclick="batchImport()">Import All</button></div></div>
+<div class="add-bar"><input type="text" id="addUrl" placeholder="Paste DOI or URL..." onkeydown="if(event.key==='Enter')addPaper(event)" autocomplete="off"><button class="btn btn-p btn-s" onclick="addPaper(event)">Add</button></div>
+<div id="batchPanel" style="display:none;padding:0 .5rem .5rem"><div class="batch-area"><textarea id="batchInput" placeholder="Paste multiple DOIs/URLs, one per line..." autocomplete="off"></textarea><button class="btn btn-p btn-s" onclick="batchImport()">Import All</button></div></div>
 <div class="sort-row">
 <select id="sortBy" onchange="renderPapers()">
-<option value="added">Added (newest)</option>
-<option value="added-asc">Added (oldest)</option>
-<option value="year">Year (newest)</option>
-<option value="year-asc">Year (oldest)</option>
-<option value="title">Title A-Z</option>
-<option value="title-desc">Title Z-A</option>
-<option value="author">First Author</option>
-<option value="journal">Journal</option>
+<option value="added">Added (newest)</option><option value="added-asc">Added (oldest)</option>
+<option value="year">Year (newest)</option><option value="year-asc">Year (oldest)</option>
+<option value="title">Title A-Z</option><option value="title-desc">Title Z-A</option>
+<option value="author">First Author</option><option value="journal">Journal</option>
 </select>
-<input type="text" class="srch" id="searchBox" placeholder="Filter... (press /)" oninput="renderPapers()" style="flex:1">
+<input type="text" class="srch" id="searchBox" placeholder="Filter... (press /)" oninput="renderPapers()" autocomplete="off">
 </div>
 <div class="pb" id="paperList"><div class="ec">Loading...</div></div>
 </div>
 <div class="grip" id="gripL"></div>
-<div id="center"><div class="ctb" id="centerToolbar"><span style="color:var(--t2);font-size:.82rem">Select a paper</span></div><div class="cc" id="centerContent"><div class="ec">Select a paper to view details</div></div></div>
+<div id="center"><div class="ctb" id="centerToolbar"><span style="color:var(--t2);font-size:.82rem">Select a paper</span></div>
+<div class="cc" id="centerContent"><div class="ec">Select a paper to view details</div></div></div>
 <div class="grip" id="gripR"></div>
 <div id="right"><div class="ph"><span>AI Chat</span><button class="btn btn-o btn-s" id="askPaperBtn" onclick="askAboutPaper()" style="display:none">Ask Paper</button><button class="btn btn-p btn-s" id="configBtn" onclick="toggleConfig()" style="margin-left:auto">Settings</button></div>
+
 <div id="configPanel" style="display:none;padding:.5rem">
-<div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.35rem"><span style="width:40px;font-size:.75rem">URL</span><input id="cfgUrl" placeholder="https://api.deepseek.com/v1" style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem"></div>
-<div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.35rem"><span style="width:40px;font-size:.75rem">Key</span><input type="password" id="cfgKey" placeholder="sk-..." style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem"></div>
-<div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.35rem"><span style="width:40px;font-size:.75rem">Model</span><select id="cfgModel" style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem;background:var(--p);color:var(--t);border:1px solid var(--b)"><option value="deepseek-chat">deepseek-chat</option></select><button class="btn btn-o btn-s" id="fetchModelsBtn" onclick="fetchModels()" title="Auto-detect models from API">&#8635;</button></div>
-<div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.5rem"><span style="width:40px;font-size:.75rem">Relay</span><input id="cfgRelay" placeholder="Relay server URL" style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem"></div>
+<div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.35rem"><span style="width:40px;font-size:.75rem">URL</span><input id="cfgUrl" placeholder="https://api.deepseek.com/v1" style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem" autocomplete="off"></div>
+<div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.35rem"><span style="width:40px;font-size:.75rem">Key</span><input type="password" id="cfgKey" placeholder="sk-..." style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem" autocomplete="new-password"></div>
+<div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.35rem"><span style="width:40px;font-size:.75rem">Model</span><select id="cfgModel" style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem;background:var(--p);color:var(--t);border:1px solid var(--b)"><option value="deepseek-chat">deepseek-chat</option></select><button class="btn btn-o btn-s" id="fetchModelsBtn" onclick="fetchModels()" title="Auto-detect models">&#8635;</button></div>
+<div style="display:flex;gap:.35rem;align-items:center;margin-bottom:.5rem"><span style="width:40px;font-size:.75rem">Relay</span><input id="cfgRelay" placeholder="Relay server URL" style="flex:1;padding:.3rem .5rem;border-radius:4px;font-size:.75rem" autocomplete="off"></div>
 <div style="display:flex;gap:.35rem"><button class="btn btn-p btn-s" onclick="saveConfig()">Save</button><button class="btn btn-o btn-s" onclick="toggleConfig()">Cancel</button></div></div>
+
 <div class="chat-msgs" id="chatMessages"><div class="ec">Configure API in Settings</div></div>
-<div class="chat-inp"><textarea id="chatInput" placeholder="Ask anything..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat(event)}"></textarea><button class="btn btn-p btn-s" onclick="sendChat(event)">Send</button></div>
-<div class="cmt-section" id="commentsSection" style="display:none">
-<div class="cmt-header" onclick="toggleComments()"><span id="cmtToggle">&#9654;</span> Comments <span id="cmtCount" style="font-weight:400"></span><span style="flex:1"></span><span class="cmt-mode" id="cmtMode" style="font-size:.65rem;color:var(--t2)">local</span></div>
-<div class="cmt-list" id="cmtList"></div>
-<div class="cmt-inp"><input class="name-inp" id="cmtName" placeholder="Name"><input id="cmtText" placeholder="Add a comment..."><button class="btn btn-p btn-s" onclick="postComment()">Post</button></div>
-</div></div>
+<div class="chat-inp"><textarea id="chatInput" placeholder="Ask anything..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat(event)}" autocomplete="off"></textarea><button class="btn btn-p btn-s" onclick="sendChat(event)">Send</button></div>
+
+<div class="tabs" id="tabsBar" style="display:none">
+<span class="on" id="tabMD" onclick="switchTab('md')">Notes (MD)</span>
+<span id="tabCmt" onclick="switchTab('cmt')">Comments</span>
 </div>
+
+<div id="tabMDContent" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+<textarea id="mdEditor" placeholder="# Notes & Markdown&#10;&#10;Supports **Markdown**, $$LaTeX$$ equations, code blocks, tables...&#10;&#10;Toggle to preview mode to see rendered output." style="flex:1;border:none;border-radius:0;padding:.5rem .75rem;font-size:.76rem;font-family:inherit;resize:none;line-height:1.6" autocomplete="off"></textarea>
+<div id="mdPreview" class="md-preview md-view" style="display:none"></div>
+<div style="display:flex;gap:.25rem;padding:.25rem .5rem;border-top:1px solid var(--b);flex-shrink:0">
+<button class="btn btn-p btn-s" id="mdEditBtn" onclick="toggleMdMode()" style="font-size:.68rem">&#9998; Edit</button>
+<button class="btn btn-o btn-s" id="mdSaveBtn" onclick="saveMdNotes()" style="font-size:.68rem">Save</button>
+<span style="flex:1"></span>
+<span style="font-size:.65rem;color:var(--t2)">TeX: $$x^2$$ &#10003;</span>
+</div></div>
+
+<div id="tabCmtContent" style="flex:1;display:none;flex-direction:column;overflow:hidden">
+<div class="cmt-section" style="flex:1;display:flex;flex-direction:column">
+<div class="cmt-list" id="cmtList" style="flex:1;overflow-y:auto;padding:.5rem .75rem"></div>
+<span id="cmtCount" style="padding:0 .75rem;font-size:.65rem;color:var(--t2);flex-shrink:0"></span>
+<div class="cmt-inp"><input class="name-inp" id="cmtName" placeholder="Name" autocomplete="off"><input id="cmtText" placeholder="Add comment..." autocomplete="off"><button class="btn btn-p btn-s" onclick="postComment()">Post</button></div>
+</div></div>
+</div></div>
 <div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script>
 var PAPERS=[],selectedId=null,chatMsgs=[],cfg={base_url:'',api_key:'',model:'deepseek-chat'};
-var cmtsShown=false,cmtsCache={};
+var cmtsCache={};
+var activeTab='md';
 
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 
@@ -204,7 +245,6 @@ function renderPapers(){
   var list=document.getElementById('paperList');if(!list)return;
   var filtered=PAPERS.slice();
   if(q){filtered=filtered.filter(function(p){var h=[p.title,p.journal,(p.authors||[]).join(' '),(p.tags||[]).join(' '),p.doi||'',p.notes||'',p.abstract||''].join(' ').toLowerCase();return h.indexOf(q)>=0})}
-  // Sort
   var sortMap={
     'added':function(a,b){return (b.added||'')>(a.added||'')?1:-1},
     'added-asc':function(a,b){return (a.added||'')>(b.added||'')?1:-1},
@@ -235,41 +275,141 @@ function selectPaper(id){
   selectedId=id;renderPapers();var p=getPaper(id);if(!p)return;
   var tb=document.getElementById('centerToolbar');
   tb.innerHTML='<span style="font-weight:600">'+esc(p.title?p.title.substring(0,60)+'...':'')+'</span><span style="flex:1"></span><button class="btn btn-o btn-s" onclick="exportPaper(\''+p.id+'\')">Export</button><button class="btn btn-o btn-s" onclick="deletePaper(\''+p.id+'\')">Delete</button>';
-  var c='<div class="dt">'+esc(p.title)+'</div>';
-  c+='<div class="dm"><b>Authors:</b> '+(p.authors||[]).join(', ')+'<br>';
-  if(p.journal)c+='<b>Journal:</b> '+esc(p.journal);if(p.year)c+=' ('+p.year+')';
-  if(p.volume)c+=' Vol.'+p.volume;if(p.pages)c+=', pp.'+p.pages;c+='<br>';
-  if(p.doi)c+='<b>DOI:</b> <a href="https://doi.org/'+p.doi+'" target="_blank" style="color:var(--a)">'+esc(p.doi)+'</a><br>';
-  if(p.arxiv_id)c+='<b>arXiv:</b> '+esc(p.arxiv_id)+'<br>';
-  c+='<b>Added:</b> '+(p.added||'N/A');
-  if(p.pdf_local)c+='<br><b>Local PDF:</b> <code style="font-size:.75rem">'+esc(p.pdf_local)+'</code>';
-  c+='</div>';
-  c+='<div style="margin-bottom:1rem"><b style="font-size:.82rem">Tags:</b> <div style="display:inline-flex;flex-wrap:wrap;gap:.2rem;margin-top:.25rem">';
-  if(p.tags){for(var i=0;i<p.tags.length;i++)c+='<span class="tag">'+esc(p.tags[i])+'<span class="del" onclick="event.stopPropagation();removeTag(\''+p.id+'\',\''+p.tags[i].replace(/'/g,"\\'")+'\')">x</span></span>'}
-  c+='<span class="tag-add" onclick="event.stopPropagation();addTag(\''+p.id+'\')">+ tag</span></div></div>';
-  c+='<div style="margin-bottom:1rem"><b style="font-size:.82rem">Notes:</b><br><textarea class="note-edit" id="noteEdit" placeholder="Add notes...">'+esc(p.notes||'')+'</textarea><button class="btn btn-p btn-s" style="margin-top:.25rem" onclick="saveNotes(\''+p.id+'\')">Save Notes</button></div>';
-  c+='<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem">';
-  if(p.pdf_downloaded)c+='<button class="btn btn-p btn-s" onclick="showPdf(\''+p.id+'\')">Preview PDF</button>';
-  if(p.pdf_url)c+='<button class="btn btn-p btn-s" onclick="downloadPdf(event,\''+p.id+'\',\''+(p.pdf_url||'').replace(/'/g,"\\'")+'\')">'+(p.pdf_downloaded?'Re-download':'Download PDF')+'</button>';
-  if(!p.pdf_downloaded&&p.pdf_url)c+='<button class="btn btn-o btn-s" onclick="openPdfUrl(\''+p.id+'\',\''+p.pdf_url.replace(/'/g,"\\'")+'\')">Open Online</button>';
-  if(p.pdf_url)c+='<button class="btn btn-o btn-s" onclick="markDownloaded(\''+p.id+'\')">Mark Done</button>';
-  c+='<button class="btn btn-o btn-s" onclick="copyBibtex(\''+p.id+'\')">Copy BibTeX</button>';
-  if(p.url)c+='<a class="btn btn-o btn-s" href="'+p.url+'" target="_blank">Source</a>';
-  c+='</div>';
-  if(p.abstract)c+='<div class="da">'+esc(p.abstract)+'</div>';
-  if(p.bibtex)c+='<div style="margin-bottom:1.2rem"><h3 style="font-size:.75rem;color:var(--t2);text-transform:uppercase;margin-bottom:.4rem">BibTeX</h3><div class="bb">'+esc(p.bibtex)+'</div></div>';
-  if(p.pdf_downloaded)c+='<div style="margin-bottom:1.2rem"><h3 style="font-size:.75rem;color:var(--t2);text-transform:uppercase;margin-bottom:.4rem">PDF Preview</h3><iframe class="pdf-frame" src="/api/pdf/'+p.id+'" style="width:100%;height:600px;border:none;background:#fff"></iframe></div>';
+  var hasPdf=p.pdf_downloaded;
+  var c='';
+
+  if(hasPdf){
+    // Split view: PDF top, metadata + buttons bottom
+    c='<div style="display:flex;flex-direction:column;height:100%">';
+    c+='<div style="flex:1;min-height:300px;display:flex;flex-direction:column">';
+    c+='<div style="display:flex;gap:.25rem;align-items:center;padding:0 1rem .3rem"><h3 style="font-size:.7rem;color:var(--t2);text-transform:uppercase;flex:1">PDF Preview</h3><button class="btn btn-o btn-s" style="font-size:.65rem" onclick="selectPaper(\''+p.id+'\')">Info</button></div>';
+    c+='<iframe src="/api/pdf/'+p.id+'" style="flex:1;border:none;background:#fff;min-height:250px"></iframe></div>';
+    // Metadata strip
+    c+='<div style="padding:.5rem 1rem;border-top:1px solid var(--b);flex-shrink:0">';
+    c+='<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.4rem">';
+    c+='<button class="btn btn-p btn-s" onclick="showPdf(\''+p.id+'\')">Fullscreen</button>';
+    c+='<button class="btn btn-p btn-s" onclick="downloadPdf(event,\''+p.id+'\',\''+(p.pdf_url||'').replace(/'/g,"\\'")+'\')">Re-download</button>';
+    c+='<button class="btn btn-o btn-s" onclick="copyBibtex(\''+p.id+'\')">Copy BibTeX</button>';
+    if(p.url)c+='<a class="btn btn-o btn-s" href="'+p.url+'" target="_blank">Source</a>';
+    c+='</div>';
+    c+='<div style="font-size:.78rem;color:var(--t2)"><b>'+esc(p.title)+'</b> &middot; '+(p.authors||[]).slice(0,2).join(', ')+' &middot; '+(p.journal||'')+(p.year?' ('+p.year+')':'')+'</div>';
+    c+='</div></div>';
+  } else {
+    // No PDF: standard detail view
+    c='<div class="dt">'+esc(p.title)+'</div>';
+    c+='<div class="dm"><b>Authors:</b> '+(p.authors||[]).join(', ')+'<br>';
+    if(p.journal)c+='<b>Journal:</b> '+esc(p.journal);if(p.year)c+=' ('+p.year+')';
+    if(p.volume)c+=' Vol.'+p.volume;if(p.pages)c+=', pp.'+p.pages;c+='<br>';
+    if(p.doi)c+='<b>DOI:</b> <a href="https://doi.org/'+p.doi+'" target="_blank" style="color:var(--a)">'+esc(p.doi)+'</a><br>';
+    if(p.arxiv_id)c+='<b>arXiv:</b> '+esc(p.arxiv_id)+'<br>';
+    c+='<b>Added:</b> '+(p.added||'N/A');
+    if(p.pdf_local)c+='<br><b>Local PDF:</b> <code style="font-size:.75rem">'+esc(p.pdf_local)+'</code>';
+    c+='</div>';
+    c+='<div style="margin-bottom:1rem"><b style="font-size:.82rem">Tags:</b> <div style="display:inline-flex;flex-wrap:wrap;gap:.2rem;margin-top:.25rem">';
+    if(p.tags){for(var i=0;i<p.tags.length;i++)c+='<span class="tag">'+esc(p.tags[i])+'<span class="del" onclick="event.stopPropagation();removeTag(\''+p.id+'\',\''+p.tags[i].replace(/'/g,"\\'")+'\')">x</span></span>'}
+    c+='<span class="tag-add" onclick="event.stopPropagation();addTag(\''+p.id+'\')">+ tag</span></div></div>';
+    c+='<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem">';
+    if(hasPdf)c+='<button class="btn btn-p btn-s" onclick="showPdf(\''+p.id+'\')">Preview PDF</button>';
+    if(p.pdf_url)c+='<button class="btn btn-p btn-s" onclick="downloadPdf(event,\''+p.id+'\',\''+(p.pdf_url||'').replace(/'/g,"\\'")+'\')">'+(hasPdf?'Re-download':'Download PDF')+'</button>';
+    if(!hasPdf&&p.pdf_url)c+='<button class="btn btn-o btn-s" onclick="openPdfUrl(\''+p.id+'\',\''+p.pdf_url.replace(/'/g,"\\'")+'\')">Open Online</button>';
+    if(p.pdf_url)c+='<button class="btn btn-o btn-s" onclick="markDownloaded(\''+p.id+'\')">Mark Done</button>';
+    c+='<button class="btn btn-o btn-s" onclick="copyBibtex(\''+p.id+'\')">Copy BibTeX</button>';
+    if(p.url)c+='<a class="btn btn-o btn-s" href="'+p.url+'" target="_blank">Source</a>';
+    c+='</div>';
+    if(p.abstract)c+='<div class="da">'+esc(p.abstract)+'</div>';
+    if(p.bibtex)c+='<div style="margin-bottom:1.2rem"><h3 style="font-size:.75rem;color:var(--t2);text-transform:uppercase;margin-bottom:.4rem">BibTeX</h3><div class="bb">'+esc(p.bibtex)+'</div></div>';
+  }
   document.getElementById('centerContent').innerHTML=c;
+  document.getElementById('centerContent').className=hasPdf?'cc':'cv'; // not needed since we removed the class-based split
   document.getElementById('askPaperBtn').style.display='inline-flex';
-  // Show comments for this paper
+
+  // Right panel: show tabs, load MD notes and comments
+  document.getElementById('tabsBar').style.display='flex';
+  document.getElementById('mdEditor').value=p.md_notes||'';
+  switchTab('md');
   loadComments(p.doi);
-  document.getElementById('commentsSection').style.display='block';
 }
 
 async function addTag(id){var t=prompt('New tag:');if(!t)return;var p=getPaper(id);if(!p)return;var tags=(p.tags||[]).slice();tags.push(t);await updatePaper(id,{tags:tags})}
 async function removeTag(id,tag){var p=getPaper(id);if(!p)return;var tags=(p.tags||[]).filter(function(x){return x!==tag});await updatePaper(id,{tags:tags})}
 async function saveNotes(id){var notes=document.getElementById('noteEdit').value;await updatePaper(id,{notes:notes})}
 async function updatePaper(id,fields){fields.id=id;try{var r=await fetch('/api/papers/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(fields)});var d=await r.json();if(d.ok){await loadPapers();selectPaper(id);toast('Updated')}else toast('Error: '+d.error)}catch(e){toast('Failed: '+e.message)}}
+
+function switchTab(tab){
+  activeTab=tab;
+  document.getElementById('tabMD').className=tab==='md'?'on':'';
+  document.getElementById('tabCmt').className=tab==='cmt'?'on':'';
+  document.getElementById('tabMDContent').style.display=tab==='md'?'flex':'none';
+  document.getElementById('tabCmtContent').style.display=tab==='cmt'?'flex':'none';
+}
+
+// === MD + TeX Notes ===
+var mdPreviewMode=false;
+var mdSaved='';
+
+function toggleMdMode(){
+  mdPreviewMode=!mdPreviewMode;
+  var ed=document.getElementById('mdEditor');
+  var pv=document.getElementById('mdPreview');
+  var btn=document.getElementById('mdEditBtn');
+  if(mdPreviewMode){
+    ed.style.display='none';pv.style.display='block';
+    var txt=ed.value;
+    var html=renderFullMd(txt);
+    pv.innerHTML=html;
+    // Render KaTeX
+    if(typeof renderMathInElement!=='undefined'){
+      try{renderMathInElement(pv,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})}catch(e){}
+    }
+    btn.innerHTML='&#9998; Edit';
+  }else{
+    ed.style.display='block';pv.style.display='none';
+    btn.innerHTML='&#9998; Preview';
+  }
+}
+
+function renderFullMd(txt){
+  var s=esc(txt);
+  // Code blocks first
+  s=s.replace(/```(\w*)\n([\s\S]*?)```/g,function(_,lang,code){return'<pre><code>'+escDirect(code)+'</code></pre>'});
+  // Inline code
+  s=s.replace(/`([^`]+)`/g,'<code>$1</code>');
+  // Bold / italic
+  s=s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  s=s.replace(/\*(.+?)\*/g,'<em>$1</em>');
+  // Headers
+  s=s.replace(/^### (.+)$/gm,'<h3>$1</h3>');
+  s=s.replace(/^## (.+)$/gm,'<h2>$1</h2>');
+  s=s.replace(/^# (.+)$/gm,'<h1>$1</h1>');
+  // Blockquote
+  s=s.replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>');
+  // Tables
+  s=s.replace(/^\|(.+)\|$/gm,function(line){
+    var cells=line.split('|').filter(function(c){return c.trim()});
+    if(/^[-:\s]+$/.test(cells.join('')))return'';
+    var tag=/^[-:\s]+$/.test(cells.join(''))?'th':'td';
+    return'<tr>'+cells.map(function(c){return'<'+tag+'>'+c.trim()+'</'+tag+'>'}).join('')+'</tr>';
+  });
+  // Horizontal rule
+  s=s.replace(/^---+$/gm,'<hr>');
+  // Line breaks
+  s=s.replace(/\n\n/g,'</p><p>');
+  s=s.replace(/\n/g,'<br>');
+  return'<p>'+s+'</p>'.replace(/<p>\s*<\/p>/g,'');
+}
+
+function escDirect(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+async function saveMdNotes(){
+  if(!selectedId)return;
+  var txt=document.getElementById('mdEditor').value;
+  mdSaved=txt;
+  try{
+    var r=await fetch('/api/papers/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:selectedId,md_notes:txt})});
+    var d=await r.json();
+    if(d.ok){var p=getPaper(selectedId);if(p)p.md_notes=txt;toast('Notes saved!')}else toast('Error: '+d.error);
+  }catch(e){toast('Failed: '+e.message)}
+}
 
 async function downloadPdf(e,id,pdfUrl){
   var btn=e?e.target:event?event.target:document.querySelector('#centerContent .btn-p');if(!pdfUrl){toast('No PDF URL');return}
@@ -280,15 +420,14 @@ async function downloadPdf(e,id,pdfUrl){
   }}btn.disabled=false;btn.innerHTML=orig;
 }
 
-function showPdf(id){document.getElementById('centerContent').innerHTML='<div style="margin-bottom:1.2rem"><h3 style="font-size:.75rem;color:var(--t2);text-transform:uppercase;margin-bottom:.4rem">PDF Preview</h3><div style="margin-bottom:.5rem"><button class="btn btn-o btn-s" onclick="selectPaper(\''+id+'\')">Back to Details</button></div><iframe class="pdf-frame" src="/api/pdf/'+id+'" style="width:100%;height:600px;border:none;background:#fff"></iframe></div>'}
-function openPdfUrl(id,url){window.open(url,'_blank');toast('PDF opened in browser. Save to pdfs/ or Downloads, then click Mark Done.')}
-async function markDownloaded(id){try{var r=await fetch('/api/papers/mark-downloaded',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})});var d=await r.json();if(d.ok){await loadPapers();selectPaper(id);toast('PDF found and linked! Preview now available.')}else toast('Not found: '+d.error+'. Save the PDF first then try again.')}catch(e){toast('Failed: '+e.message)}}
+function showPdf(id){document.getElementById('centerContent').innerHTML='<div style="display:flex;flex-direction:column;height:100%"><div style="display:flex;gap:.25rem;align-items:center;padding:0 1rem .3rem"><h3 style="font-size:.7rem;color:var(--t2);text-transform:uppercase;flex:1">PDF Fullscreen</h3><button class="btn btn-o btn-s" style="font-size:.65rem" onclick="selectPaper(\''+id+'\')">Back</button></div><iframe src="/api/pdf/'+id+'" style="flex:1;border:none;background:#fff"></iframe></div>';}
+function openPdfUrl(id,url){window.open(url,'_blank');toast('PDF opened. Save to pdfs/ or Downloads, then click Mark Done.')}
+async function markDownloaded(id){try{var r=await fetch('/api/papers/mark-downloaded',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})});var d=await r.json();if(d.ok){await loadPapers();selectPaper(id);toast('PDF found and linked!')}else toast('Not found: '+d.error+'. Save the PDF first.')}catch(e){toast('Failed: '+e.message)}}
 
-// Auto-scan helper — user facing
 async function scanDownloads(){
   toast('Scanning Downloads and pdfs folders...');
   try{var r=await fetch('/api/scan-pdfs',{method:'POST'});var d=await r.json();
-    if(d.ok&&d.matched.length){toast('Auto-linked '+d.matched.length+' PDFs!');await loadPapers()}else{toast('No new PDFs found. Save PDFs to Downloads/ folder and try again.')}
+    if(d.ok&&d.matched.length){toast('Auto-linked '+d.matched.length+' PDFs!');await loadPapers()}else{toast('No new PDFs found.')}
   }catch(e){toast('Scan failed: '+e.message)}
 }
 
@@ -300,7 +439,7 @@ async function addPaper(e){
 }
 
 async function deletePaper(id){if(!confirm('Delete this paper?'))return;
-  try{var r=await fetch('/api/papers/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})});var d=await r.json();if(d.ok){if(selectedId===id)selectedId=null;document.getElementById('centerContent').innerHTML='<div class="ec">Select a paper</div>';document.getElementById('centerToolbar').innerHTML='<span style="color:var(--t2);font-size:.82rem">Select a paper</span>';document.getElementById('askPaperBtn').style.display='none';document.getElementById('commentsSection').style.display='none';await loadPapers();updateStats();toast('Paper deleted')}else toast('Error: '+d.error)}catch(e){toast('Failed: '+e.message)}
+  try{var r=await fetch('/api/papers/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})});var d=await r.json();if(d.ok){if(selectedId===id)selectedId=null;document.getElementById('centerContent').innerHTML='<div class="ec">Select a paper</div>';document.getElementById('centerToolbar').innerHTML='<span style="color:var(--t2);font-size:.82rem">Select a paper</span>';document.getElementById('askPaperBtn').style.display='none';document.getElementById('tabsBar').style.display='none';await loadPapers();updateStats();toast('Paper deleted')}else toast('Error: '+d.error)}catch(e){toast('Failed: '+e.message)}
 }
 
 function copyBibtex(id){var p=getPaper(id);if(!p||!p.bibtex){toast('No BibTeX');return}navigator.clipboard.writeText(p.bibtex).then(function(){toast('BibTeX copied!')})}
@@ -308,11 +447,10 @@ function exportPaper(id){var p=getPaper(id);if(!p)return;var j=JSON.stringify(p,
 function exportAllBibtex(){var all=PAPERS.filter(function(p){return p.bibtex}).map(function(p){return p.bibtex}).join('\n\n');if(!all){toast('No entries');return}var b=new Blob([all],{type:'text/plain'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='papers.bib';a.click();URL.revokeObjectURL(u);toast('Exported BibTeX')}
 function exportAllJson(){var j=JSON.stringify({papers:PAPERS},null,2);var b=new Blob([j],{type:'application/json'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='papers.json';a.click();URL.revokeObjectURL(u);toast('Exported papers.json')}
 
-// Fixed Download All — opens URLs one by one instead of crashing the server
 async function downloadAllPdfs(){
   var missing=PAPERS.filter(function(p){return!p.pdf_downloaded&&p.pdf_url});
   if(!missing.length){toast('All PDFs already downloaded');return}
-  toast('Opening '+missing.length+' PDFs in browser tabs. Save each to pdfs/ folder.');
+  toast('Opening '+missing.length+' PDFs in browser tabs.');
   for(var i=0;i<missing.length;i++){
     var p=missing[i];
     setTimeout(function(url){window.open(url,'_blank')},i*800,p.pdf_url);
@@ -328,24 +466,18 @@ function getRelayUrl(){return localStorage.getItem('litmanager_relay')||''}
 async function loadComments(doi){
   if(!doi){document.getElementById('cmtList').innerHTML='<div style="color:var(--t2);font-size:.75rem">No DOI</div>';return}
   var relay=getRelayUrl();
-  document.getElementById('cmtMode').textContent=relay?'relay':'local';
-
-  // Always load local comments first
   var local=[];
   try{var r=await fetch('/api/comments?doi='+encodeURIComponent(doi));local=await r.json()}catch(e){}
   cmtsCache[doi]=local;
-
-  // If relay configured, also fetch from relay
   if(relay){
     try{
       var rr=await fetch(relay.replace(/\/$/,'')+'/comments?doi='+encodeURIComponent(doi));
       var remote=await rr.json();
-      // Merge: dedup by id, keep remote comments
       var seen={};
       for(var i=0;i<local.length;i++)seen[local[i].id]=true;
       for(var j=0;j<remote.length;j++){if(!seen[remote[j].id])local.push(remote[j])}
       cmtsCache[doi]=local;
-    }catch(e){console.log('Relay fetch failed:',e)}
+    }catch(e){}
   }
   renderComments(local);
 }
@@ -354,7 +486,7 @@ function renderComments(comments){
   var el=document.getElementById('cmtList');
   var count=document.getElementById('cmtCount');
   count.textContent=comments.length?'('+comments.length+')':'';
-  if(!comments.length){el.innerHTML='<div style="color:var(--t2);font-size:.75rem">No comments yet. Be the first!</div>';return}
+  if(!comments.length){el.innerHTML='<div style="color:var(--t2);font-size:.75rem">No comments yet.</div>';return}
   var html='';
   for(var i=0;i<comments.length;i++){
     var c=comments[i];
@@ -369,53 +501,29 @@ async function postComment(){
   var p=getPaper(selectedId);if(!p||!p.doi){toast('No DOI for this paper');return}
   var author=document.getElementById('cmtName').value.trim()||'Anonymous';
   var text=document.getElementById('cmtText').value.trim();if(!text)return;
-
-  // First save locally
   var d;
   try{
     var r=await fetch('/api/comments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({doi:p.doi,author:author,text:text})});
     d=await r.json();
   }catch(e){toast('Failed: '+e.message);return}
   if(!d.ok){toast('Error: '+d.error);return}
-
   document.getElementById('cmtText').value='';
   var localList=d.comments;
   var newComment=localList[localList.length-1];
-
-  // If relay configured, sign and send
   var relay=getRelayUrl();
   if(relay){
     try{
-      // Sign the comment via server
       var sr=await fetch('/api/sign-comment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(newComment)});
       var signed=await sr.json();
       if(signed.ok){
-        // Post to relay
         var rr=await fetch(relay.replace(/\/$/,'')+'/comments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(signed.comment)});
         var rd=await rr.json();
-        if(rd.ok){
-          cmtsCache[p.doi]=rd.comments;
-          renderComments(rd.comments);
-          toast('Posted to relay!');
-          return;
-        }
+        if(rd.ok){cmtsCache[p.doi]=rd.comments;renderComments(rd.comments);toast('Posted to relay!');return}
       }
-    }catch(e){console.log('Relay post failed:',e)}
+    }catch(e){}
   }
-
   cmtsCache[p.doi]=localList;
   renderComments(localList);
-}
-
-function toggleComments(){
-  var list=document.getElementById('cmtList');
-  var inp=document.querySelector('.cmt-inp');
-  var toggle=document.getElementById('cmtToggle');
-  if(list.style.display==='none'){
-    list.style.display='block';inp.style.display='flex';toggle.textContent='▼';
-  }else{
-    list.style.display='none';inp.style.display='none';toggle.textContent='▶';
-  }
 }
 
 function renderChat(){
@@ -429,11 +537,11 @@ try{var r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'applic
 
 function askAboutPaper(){if(!selectedId)return;var p=getPaper(selectedId);if(!p)return;if(!cfg.api_key){toast('Configure API in Settings first');toggleConfig();return}var ctx='I want to discuss this paper:\n\nTitle: '+p.title+'\nAuthors: '+(p.authors||[]).join(', ')+'\nJournal: '+(p.journal||'')+'\nYear: '+(p.year||'')+'\nDOI: '+(p.doi||'')+'\nAbstract: '+(p.abstract||'N/A');if(p.notes)ctx+='\nMy notes: '+p.notes;chatMsgs.push({role:'user',content:ctx});renderChat();document.getElementById('chatInput').focus();document.getElementById('chatMessages').scrollTop=document.getElementById('chatMessages').scrollHeight}
 function toggleConfig(){var p=document.getElementById('configPanel');if(p.style.display==='none'){p.style.display='block';document.getElementById('cfgUrl').value=cfg.base_url||'';document.getElementById('cfgKey').value=cfg.api_key||'';setModelSelect(cfg.model||'deepseek-chat');document.getElementById('cfgRelay').value=localStorage.getItem('litmanager_relay')||''}else p.style.display='none'}
+
 // === Model autodetect ===
 function setModelSelect(currentModel){
   var sel=document.getElementById('cfgModel');
   if(!currentModel)return;
-  // Add current model as option if not already there
   var found=false;
   for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===currentModel){sel.selectedIndex=i;found=true;break}}
   if(!found){var opt=document.createElement('option');opt.value=currentModel;opt.textContent=currentModel;sel.appendChild(opt);sel.selectedIndex=sel.options.length-1}
@@ -449,10 +557,7 @@ async function fetchModels(){
     var d=await r.json();
     if(d.ok&&d.models.length){
       var sel=document.getElementById('cfgModel');sel.innerHTML='';
-      for(var i=0;i<d.models.length;i++){
-        var m=d.models[i];var opt=document.createElement('option');opt.value=m;opt.textContent=m;sel.appendChild(opt);
-      }
-      // Try to select current model
+      for(var i=0;i<d.models.length;i++){var m=d.models[i];var opt=document.createElement('option');opt.value=m;opt.textContent=m;sel.appendChild(opt)}
       setModelSelect(cfg.model||d.models[0]);
       toast('Found '+d.models.length+' models'+(d.from_api?'':' (preset)')+'. Select one and Save.');
     }else{toast('Could not fetch models: '+(d.error||'No models returned'))}
@@ -472,179 +577,52 @@ var THEME_PRESETS=[
   {name:'Mono',bg:'#f5f5f5',p:'#ffffff',t:'#121212',t2:'#757575',a:'#424242',a2:'#616161',b:'#e0e0e0',h:'#eeeeee',dkbg:'#121212',dkp:'#1e1e1e',dkt:'#e0e0e0',dkt2:'#9e9e9e',dka:'#9e9e9e',dka2:'#bdbdbd',dkb:'#333333',dkh:'#252525'},
   {name:'Sunset',bg:'#fef8f0',p:'#ffffff',t:'#3a2010',t2:'#996644',a:'#e67e22',a2:'#f39c12',b:'#fdebd0',h:'#fef5e7',dkbg:'#3a2010',dkp:'#4a3020',dkt:'#fdecd5',dkt2:'#c99566',dka:'#f39c12',dka2:'#f1c40f',dkb:'#554030',dkh:'#453020'},
 ];
-function loadTheme(){
-  var raw=localStorage.getItem('litmanager_theme');
-  var t=THEME_PRESETS[0];
-  if(raw){try{var custom=JSON.parse(raw);if(custom.custom){t=custom}else if(custom.name){t=custom}}catch(e){}}
-  return t;
-}
+function loadTheme(){var raw=localStorage.getItem('litmanager_theme');var t=THEME_PRESETS[0];if(raw){try{var custom=JSON.parse(raw);if(custom.custom){t=custom}else if(custom.name){t=custom}}catch(e){}}return t}
 function saveTheme(t){localStorage.setItem('litmanager_theme',JSON.stringify(t))}
 function applyThemeVars(t,dark){
   var r=document.documentElement;
-  if(dark){
-    r.style.setProperty('--bg',t.dkbg);r.style.setProperty('--p',t.dkp);r.style.setProperty('--t',t.dkt);r.style.setProperty('--t2',t.dkt2);
-    r.style.setProperty('--a',t.dka);r.style.setProperty('--a2',t.dka2);r.style.setProperty('--b',t.dkb);r.style.setProperty('--h',t.dkh);
-  }else{
-    r.style.setProperty('--bg',t.bg);r.style.setProperty('--p',t.p);r.style.setProperty('--t',t.t);r.style.setProperty('--t2',t.t2);
-    r.style.setProperty('--a',t.a);r.style.setProperty('--a2',t.a2);r.style.setProperty('--b',t.b);r.style.setProperty('--h',t.h);
-  }
-  // accent color override
-  var acc=document.getElementById('tAccent');
-  if(acc&&acc.dataset.set==='1'){
-    var cl=acc.value;r.style.setProperty('--a',cl);r.style.setProperty('--a2',cl);
-  }
+  if(dark){r.style.setProperty('--bg',t.dkbg);r.style.setProperty('--p',t.dkp);r.style.setProperty('--t',t.dkt);r.style.setProperty('--t2',t.dkt2);r.style.setProperty('--a',t.dka);r.style.setProperty('--a2',t.dka2);r.style.setProperty('--b',t.dkb);r.style.setProperty('--h',t.dkh)}
+  else{r.style.setProperty('--bg',t.bg);r.style.setProperty('--p',t.p);r.style.setProperty('--t',t.t);r.style.setProperty('--t2',t.t2);r.style.setProperty('--a',t.a);r.style.setProperty('--a2',t.a2);r.style.setProperty('--b',t.b);r.style.setProperty('--h',t.h)}
+  var acc=document.getElementById('tAccent');if(acc&&acc.dataset.set==='1'){var cl=acc.value;r.style.setProperty('--a',cl);r.style.setProperty('--a2',cl)}
 }
-function applyTheme(){
-  var t=loadTheme();
-  var dark=document.body.classList.contains('dark');
-  applyThemeVars(t,dark);
-  // custom accent override
-  var acc=document.getElementById('tAccent');var op=document.getElementById('tOpacity');var bl=document.getElementById('tBlur');
-  if(acc&&acc.dataset.set==='1'){applyThemeVars(t,dark)}
-  // Background overlay
-  applyBgOverlay();
-}
+function applyTheme(){var t=loadTheme();var dark=document.body.classList.contains('dark');applyThemeVars(t,dark);applyBgOverlay()}
 function applyBgOverlay(){
-  var op=document.getElementById('tOpacity');var bl=document.getElementById('tBlur');var bgUrl=document.getElementById('tBgUrl');
-  var overlay=document.getElementById('bgOverlay');
+  var op=document.getElementById('tOpacity');var bl=document.getElementById('tBlur');var bgUrl=document.getElementById('tBgUrl');var overlay=document.getElementById('bgOverlay');
   var v=document.getElementById('tOpacityVal');var b=document.getElementById('tBlurVal');
-  if(op)v.textContent=op.value+'%';
-  if(bl)b.textContent=bl.value+'px';
-  var o=(parseInt(op&&op.value||100)/100).toFixed(2);
-  var blur=parseInt(bl&&bl.value||0);
-  if(o<1||blur>0){
-    overlay.style.display='block';
-    overlay.style.background='rgba(255,255,255,'+(1-o)+')';
-    overlay.style.backdropFilter='blur('+blur+'px)';
-  }else{overlay.style.display='none'}
-  if(bgUrl&&bgUrl.value.trim()){
-    var url=bgUrl.value.trim();
-    if(/\.(mp4|webm|ogg)$/i.test(url)){setBgVideo(url)}
-    else{setBgImage(url)}
-  }else{clearBg()}
+  if(op)v.textContent=op.value+'%';if(bl)b.textContent=bl.value+'px';
+  var o=(parseInt(op&&op.value||100)/100).toFixed(2);var blur=parseInt(bl&&bl.value||0);
+  if(o<1||blur>0){overlay.style.display='block';overlay.style.background='rgba(255,255,255,'+(1-o)+')';overlay.style.backdropFilter='blur('+blur+'px)'}else{overlay.style.display='none'}
+  if(bgUrl&&bgUrl.value.trim()){var url=bgUrl.value.trim();if(/\.(mp4|webm|ogg)$/i.test(url))setBgVideo(url);else setBgImage(url)}else clearBg()
 }
-function setBgImage(url){
-  clearBgVideo();
-  document.body.style.backgroundImage='url('+url+')';
-  document.body.style.backgroundSize='cover';
-  document.body.style.backgroundPosition='center';
-  document.body.style.backgroundAttachment='fixed';
-}
-function setBgVideo(url){
-  var v=document.getElementById('bgVideo');
-  v.src=url;v.loop=true;v.muted=true;v.autoplay=true;v.playsInline=true;
-  v.style.display='block';
-  try{v.play()}catch(e){}
-  document.body.style.backgroundImage='none';
-}
+function setBgImage(url){clearBgVideo();document.body.style.backgroundImage='url('+url+')';document.body.style.backgroundSize='cover';document.body.style.backgroundPosition='center';document.body.style.backgroundAttachment='fixed'}
+function setBgVideo(url){var v=document.getElementById('bgVideo');v.src=url;v.loop=true;v.muted=true;v.autoplay=true;v.playsInline=true;v.style.display='block';try{v.play()}catch(e){};document.body.style.backgroundImage='none'}
 function clearBgVideo(){var v=document.getElementById('bgVideo');v.pause();v.src='';v.style.display='none'}
-function clearBg(){clearBgVideo();document.body.style.backgroundImage='';document.querySelectorAll('.panel-bg').forEach(function(el){el.style.opacity=''})}
-
-function loadBgFile(){
-  var f=document.getElementById('tBgFile').files[0];if(!f)return;
-  var url=URL.createObjectURL(f);
-  document.getElementById('tBgUrl').value=url;
-  applyTheme();
-}
-function toggleTheme(){
-  var p=document.getElementById('themePanel');
-  p.style.display=p.style.display==='none'?'block':'none';
-  if(p.style.display==='block')renderThemePresets();
-}
-function renderThemePresets(){
-  var wrap=document.getElementById('themePresets');
-  var t=loadTheme();
-  var html='';
-  for(var i=0;i<THEME_PRESETS.length;i++){
-    var pr=THEME_PRESETS[i];
-    var on=(pr.name===t.name&&!t.custom)?' on':'';
-    html+='<span class="theme-preset'+on+'" style="background:'+pr.a+'" title="'+pr.name+'" onclick="pickPreset('+i+')"></span>';
-  }
-  wrap.innerHTML=html;
-}
-function pickPreset(idx){
-  var t=THEME_PRESETS[idx];t.custom=false;
-  saveTheme(t);document.getElementById('tAccent').dataset.set='0';
-  document.getElementById('tAccent').value=t.a;
-  document.getElementById('tBgUrl').value='';
-  applyTheme();renderThemePresets();
-  // persist bg settings separately
-  saveBgSettings();
-}
-function saveBgSettings(){
-  var s={bgUrl:document.getElementById('tBgUrl').value,opacity:document.getElementById('tOpacity').value,blur:document.getElementById('tBlur').value,
-    accent:document.getElementById('tAccent').value,accentSet:document.getElementById('tAccent').dataset.set};
-  localStorage.setItem('litmanager_bg',JSON.stringify(s));
-}
-function loadBgSettings(){
-  var raw=localStorage.getItem('litmanager_bg');
-  if(!raw)return;
-  try{var s=JSON.parse(raw);
-    if(s.bgUrl)document.getElementById('tBgUrl').value=s.bgUrl;
-    if(s.opacity)document.getElementById('tOpacity').value=s.opacity;
-    if(s.blur)document.getElementById('tBlur').value=s.blur;
-    if(s.accent)document.getElementById('tAccent').value=s.accent;
-    if(s.accentSet)document.getElementById('tAccent').dataset.set=s.accentSet;
-    applyTheme();
-  }catch(e){}
-}
-
-// Hook accent color change
-document.getElementById('tAccent').addEventListener('input',function(){
-  this.dataset.set='1';
-  applyTheme();
-  saveBgSettings();
-});
+function clearBg(){clearBgVideo();document.body.style.backgroundImage=''}
+function loadBgFile(){var f=document.getElementById('tBgFile').files[0];if(!f)return;var url=URL.createObjectURL(f);document.getElementById('tBgUrl').value=url;applyTheme()}
+function toggleTheme(){var p=document.getElementById('themePanel');p.style.display=p.style.display==='none'?'block':'none';if(p.style.display==='block')renderThemePresets()}
+function renderThemePresets(){var wrap=document.getElementById('themePresets');var t=loadTheme();var html='';for(var i=0;i<THEME_PRESETS.length;i++){var pr=THEME_PRESETS[i];var on=(pr.name===t.name&&!t.custom)?' on':'';html+='<span class="theme-preset'+on+'" style="background:'+pr.a+'" title="'+pr.name+'" onclick="pickPreset('+i+')"></span>'}wrap.innerHTML=html}
+function pickPreset(idx){var t=THEME_PRESETS[idx];t.custom=false;saveTheme(t);document.getElementById('tAccent').dataset.set='0';document.getElementById('tAccent').value=t.a;document.getElementById('tBgUrl').value='';applyTheme();renderThemePresets();saveBgSettings()}
+function saveBgSettings(){var s={bgUrl:document.getElementById('tBgUrl').value,opacity:document.getElementById('tOpacity').value,blur:document.getElementById('tBlur').value,accent:document.getElementById('tAccent').value,accentSet:document.getElementById('tAccent').dataset.set};localStorage.setItem('litmanager_bg',JSON.stringify(s))}
+function loadBgSettings(){var raw=localStorage.getItem('litmanager_bg');if(!raw)return;try{var s=JSON.parse(raw);if(s.bgUrl)document.getElementById('tBgUrl').value=s.bgUrl;if(s.opacity)document.getElementById('tOpacity').value=s.opacity;if(s.blur)document.getElementById('tBlur').value=s.blur;if(s.accent)document.getElementById('tAccent').value=s.accent;if(s.accentSet)document.getElementById('tAccent').dataset.set=s.accentSet;applyTheme()}catch(e){}}
+document.getElementById('tAccent').addEventListener('input',function(){this.dataset.set='1';applyTheme();saveBgSettings()});
 document.getElementById('tOpacity').addEventListener('input',function(){saveBgSettings()});
 document.getElementById('tBlur').addEventListener('input',function(){saveBgSettings()});
-
-// Hook dark mode toggle to also apply theme
 var _origToggleDark=toggleDark;
-toggleDark=function(){
-  _origToggleDark();
-  applyTheme();
-};
-// Call theme on load
-(function(){
-  applyTheme();
-  renderThemePresets();
-  loadBgSettings();
-})();
+toggleDark=function(){_origToggleDark();applyTheme()};
+(function(){applyTheme();renderThemePresets();loadBgSettings()})();
 
 // === Drag handles ===
 (function(){
   var gripL=document.getElementById('gripL'),gripR=document.getElementById('gripR');
   var left=document.getElementById('left'),right=document.getElementById('right');
   var dragging=null,startX=0,startW=0,target=null;
-
-  function onDown(e){
-    dragging=e.target;target=e.target===gripL?left:right;
-    startX=e.clientX;startW=target.offsetWidth;
-    dragging.classList.add('on');document.body.style.cursor='col-resize';
-    e.preventDefault();
-  }
-  function onMove(e){
-    if(!dragging)return;
-    var dx=e.clientX-startX;
-    var newW=target===left?startW+dx:startW-dx;
-    newW=Math.max(200,Math.min(newW,window.innerWidth*0.55));
-    target.style.width=newW+'px';
-  }
-  function onUp(){
-    if(!dragging)return;
-    dragging.classList.remove('on');document.body.style.cursor='';
-    dragging=null;target=null;
-  }
-  gripL.addEventListener('mousedown',onDown);
-  gripR.addEventListener('mousedown',onDown);
-  document.addEventListener('mousemove',onMove);
-  document.addEventListener('mouseup',onUp);
+  function onDown(e){dragging=e.target;target=e.target===gripL?left:right;startX=e.clientX;startW=target.offsetWidth;dragging.classList.add('on');document.body.style.cursor='col-resize';e.preventDefault()}
+  function onMove(e){if(!dragging)return;var dx=e.clientX-startX;var newW=target===left?startW+dx:startW-dx;newW=Math.max(200,Math.min(newW,window.innerWidth*0.55));target.style.width=newW+'px'}
+  function onUp(){if(!dragging)return;dragging.classList.remove('on');document.body.style.cursor='';dragging=null;target=null}
+  gripL.addEventListener('mousedown',onDown);gripR.addEventListener('mousedown',onDown);
+  document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);
 })();
-
-document.addEventListener('keydown',function(e){
-  if(e.key==='/'&&document.activeElement===document.body){e.preventDefault();document.getElementById('searchBox').focus()}
-});
-
+document.addEventListener('keydown',function(e){if(e.key==='/'&&document.activeElement===document.body){e.preventDefault();document.getElementById('searchBox').focus()}});
 loadPapers();loadConfig();renderChat();updateStats();
 </script>
 </body></html>

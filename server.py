@@ -611,7 +611,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     db = load_db()
                     for p in db["papers"]:
                         if p.get("id") == pid:
-                            for field in ("tags", "notes", "title"):
+                            for field in ("tags", "notes", "title", "md_notes"):
                                 if field in d:
                                     p[field] = d[field]
                             save_db(db)
