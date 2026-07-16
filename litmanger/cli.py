@@ -12,7 +12,6 @@ from .fetcher import collect_paper
 from .models import PaperDB
 from .pdf import download_pdf
 from .server import run_server
-from .templates import generate_html
 
 SCRIPT_DIR = Path(__file__).parent.parent.resolve()
 DB_PATH = SCRIPT_DIR / "papers.json"
@@ -167,7 +166,6 @@ def cmd_html(_verbose: bool = False) -> int:
 def cmd_server(port: int = 8765, _verbose: bool = False) -> int:
     """Start the local dashboard server."""
     _setup_logging(False)
-    from .server import PORT
     db = PaperDB.load(DB_PATH)
     run_server(db, PDF_DIR, SCRIPT_DIR, port=port)
     return 0

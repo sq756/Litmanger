@@ -6,7 +6,6 @@ import base64
 import hashlib
 import http.server
 import json
-import os
 import re
 import secrets
 import shutil
@@ -118,7 +117,7 @@ def load_db():
             return _db_cache
         db_path = resolve_db_path()
         if db_path.exists():
-            with open(db_path, "r", encoding="utf-8") as f:
+            with open(db_path, encoding="utf-8") as f:
                 _db_cache = json.load(f)
         else:
             _db_cache = {"papers": []}
@@ -135,7 +134,7 @@ def save_db(db):
 
 def load_config():
     if CONFIG_PATH.exists():
-        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        with open(CONFIG_PATH, encoding="utf-8") as f:
             return json.load(f)
     return {"base_url": "", "api_key": "", "model": "deepseek-chat"}
 
@@ -313,7 +312,7 @@ def mark_downloaded(paper_id, local_path=None):
 def load_comments():
     cpath = resolve_comments_path()
     if cpath.exists():
-        with open(cpath, "r", encoding="utf-8") as f:
+        with open(cpath, encoding="utf-8") as f:
             return json.load(f)
     return {}
 
@@ -327,12 +326,12 @@ def load_identity():
     """Load or generate an Ed25519 keypair for this installation."""
     ipath = resolve_identity_path()
     if ipath.exists():
-        with open(ipath, "r", encoding="utf-8") as f:
+        with open(ipath, encoding="utf-8") as f:
             return json.load(f)
     # Generate new keypair using Python cryptography if available
     try:
-        from cryptography.hazmat.primitives.asymmetric import ed25519
         from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import ed25519
 
         priv = ed25519.Ed25519PrivateKey.generate()
         pub = priv.public_key()

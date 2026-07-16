@@ -16,7 +16,6 @@ from typing import Callable
 from .models import Paper
 from .utils import (
     BROWSER_HEADERS,
-    USER_AGENT,
     extract_doi,
     extract_doi_from_html,
     extract_meta_name,
